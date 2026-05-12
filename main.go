@@ -1,13 +1,20 @@
 package main
 
+import _ "github.com/lib/pq"
+
 import (
 	"bufio"
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 
+	"github.com/SaschaRunge/llm-local/internal/database"
+
+	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 	anyllm "github.com/mozilla-ai/any-llm-go"
 	"github.com/mozilla-ai/any-llm-go/providers/llamacpp"
 )
@@ -18,6 +25,17 @@ const colorReset = "\033[0m"
 
 func main() {
 	ctx := context.Background()
+
+	godotenv.Load()
+	dbURL := os.Getenv("DB_URL")
+
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		fmt.Printf("unable to open database: %s", err)
+		return
+	}
+
+	dbQueries := database.New(db)
 
 	provider, err := llamacpp.New()
 	if err != nil {
@@ -33,6 +51,28 @@ func main() {
 		{Role: anyllm.RoleSystem, Content: string(systemPrompt)},
 	}
 
+	chatID := uuid.New()
+	authorIDSystem := uuid.New()
+	authorIDUser := uuid.New()
+	authorIDLLM := uuid.New()
+
+	/*dbQueries.AddChat(context.Background(), "testchat")
+	dbQueries.AddCharacter(context.Background(), database.AddCharacterParams{
+		Name:         "Toertchen",
+		SystemPrompt: sql.NullString{String: "Ich bin ein Toertchen.", Valid: true},
+		IsUser:       sql.NullBool{Bool: false, Valid: true},
+	})*/
+
+	_, err = dbQueries.AddMessage(context.Background(), database.AddMessageParams{
+		ContentAnswer: string(systemPrompt),
+		ChatID:        chatID,
+		AuthorID:      authorIDSystem,
+	})
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("User:")
@@ -40,6 +80,11 @@ func main() {
 		input := scanner.Text()
 		message := anyllm.Message{Role: anyllm.RoleUser, Content: input}
 		messages = append(messages, message)
+		dbQueries.AddMessage(context.Background(), database.AddMessageParams{
+			ContentAnswer: string(input),
+			ChatID:        chatID,
+			AuthorID:      authorIDUser,
+		})
 		chunks, errs := provider.CompletionStream(ctx, anyllm.CompletionParams{
 			Model:    "qwen3.6-27b",
 			Messages: messages,
@@ -47,6 +92,11 @@ func main() {
 
 		answer, _, _ := handleStream(chunks, errs)
 		messages = append(messages, anyllm.Message{Role: anyllm.RoleAssistant, Content: answer})
+		dbQueries.AddMessage(context.Background(), database.AddMessageParams{
+			ContentAnswer: string(answer),
+			ChatID:        chatID,
+			AuthorID:      authorIDLLM,
+		})
 
 	}
 }
