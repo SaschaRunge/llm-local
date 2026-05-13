@@ -7,6 +7,8 @@ package database
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 const addChat = `-- name: AddChat :one
@@ -33,30 +35,24 @@ func (q *Queries) AddChat(ctx context.Context, name string) (Chat, error) {
 	return i, err
 }
 
-const getChatByName = `-- name: GetChatByName :many
-SELECT id, created_at, updated_at, deleted_at, name FROM chats
-WHERE name = $1
+const getChatsLikeName = `-- name: GetChatsLikeName :many
+SELECT id FROM chats
+WHERE name LIKE $1
 `
 
-func (q *Queries) GetChatByName(ctx context.Context, name string) ([]Chat, error) {
-	rows, err := q.db.QueryContext(ctx, getChatByName, name)
+func (q *Queries) GetChatsLikeName(ctx context.Context, name string) ([]uuid.UUID, error) {
+	rows, err := q.db.QueryContext(ctx, getChatsLikeName, name)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Chat
+	var items []uuid.UUID
 	for rows.Next() {
-		var i Chat
-		if err := rows.Scan(
-			&i.ID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-			&i.Name,
-		); err != nil {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
 			return nil, err
 		}
-		items = append(items, i)
+		items = append(items, id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

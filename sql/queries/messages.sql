@@ -10,3 +10,6 @@ VALUES (
     $4
 )
 RETURNING *;
+
+-- name: DeleteMessages :exec
+DELETE FROM messages;

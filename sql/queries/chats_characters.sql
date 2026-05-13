@@ -6,3 +6,7 @@ VALUES(
     $2
 )
 RETURNING *;
+
+-- name: GetCharactersLikeName :many
+SELECT id FROM characters 
+WHERE name LIKE $1;

@@ -11,6 +11,34 @@ import (
 	"github.com/google/uuid"
 )
 
+const getCharactersLikeName = `-- name: GetCharactersLikeName :many
+SELECT id FROM characters 
+WHERE name LIKE $1
+`
+
+func (q *Queries) GetCharactersLikeName(ctx context.Context, name string) ([]uuid.UUID, error) {
+	rows, err := q.db.QueryContext(ctx, getCharactersLikeName, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const subscribeToChat = `-- name: SubscribeToChat :one
 INSERT INTO chat_subscriptions(id, chat_id, character_id)
 VALUES(
