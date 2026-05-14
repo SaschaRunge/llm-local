@@ -1,14 +1,24 @@
 package cli
 
 import (
-	_ "github.com/SaschaRunge/llm-local/internal/modes"
+	"fmt"
+
+	"github.com/SaschaRunge/llm-local/internal/scenes"
 )
 
 func runCommandChat(ctx commandContext) error {
-	ctx.cli.Mode = StateChat
+	chats, err := ctx.cli.DBQueries.GetChatsLikeName(ctx.cli.context, ctx.args[0])
+	if err != nil {
+		return nil
+	}
+	if len(chats) == 0 {
+		return fmt.Errorf("No chat with name '%s'.", ctx.args[0])
+	}
+	sceneChat := scenes.SceneChat{
+		ID:   chats[0].ID,
+		Name: chats[0].Name,
+	}
+	sceneChat.Run(ctx.cli)
 
-	//modes.ModeChat{
-
-	//}
 	return nil
 }

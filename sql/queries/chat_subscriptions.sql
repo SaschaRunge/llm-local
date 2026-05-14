@@ -1,0 +1,17 @@
+-- name: SubscribeToChat :exec
+INSERT INTO chat_subscriptions(id, chat_id, character_id)
+VALUES(
+    gen_random_uuid(),
+    $1,
+    $2
+);
+
+-- name: GetCharactersInChatByChatID :many
+SELECT * FROM chat_subscriptions 
+INNER JOIN characters
+    ON chat_subscriptions.character_id = characters.id
+WHERE chat_subscriptions.chat_id = $1;
+
+-- name: GetCharactersLikeName :many
+SELECT id FROM characters 
+WHERE name LIKE $1;

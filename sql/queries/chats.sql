@@ -8,6 +8,10 @@ VALUES(
 )
 RETURNING *;
 
+-- name: GetChatByID :one
+SELECT * FROM chats
+WHERE id = $1;
+
 -- name: GetChatsLikeName :many
-SELECT id FROM chats
+SELECT * FROM chats
 WHERE name LIKE $1;

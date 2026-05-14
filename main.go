@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/SaschaRunge/llm-local/internal/cli"
+	_ "github.com/SaschaRunge/llm-local/internal/cli"
 	"github.com/SaschaRunge/llm-local/internal/database"
 
 	"github.com/google/uuid"
@@ -38,16 +38,17 @@ func main() {
 
 	dbQueries := database.New(db)
 
-	ui := cli.New(dbQueries)
+	//ui := cli.New(dbQueries)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Scan()
-	input := scanner.Text()
+	//input := scanner.Text()
+	/*
 
-	err = ui.RunCommand(input)
-	if err != nil {
-		fmt.Printf("Unable to run command %s: %s", input, err)
-	}
+		_, err = ui.ExecuteCommand(input)
+		if err != nil {
+			fmt.Printf("Unable to run command %s: %s", input, err)
+		} */
 
 	provider, err := llamacpp.New()
 	if err != nil {
@@ -69,16 +70,48 @@ func main() {
 	charIDs, err := dbQueries.GetCharactersLikeName(context.Background(), "Toertchen")
 	chatIDs, err := dbQueries.GetChatsLikeName(context.Background(), "%test%")
 
-	fmt.Printf("CHAT ID: %v", chatIDs)
+	//fmt.Printf("CHAT ID: %v", chatIDs)
 
 	_, err = dbQueries.AddMessage(context.Background(), database.AddMessageParams{
 		ContentAnswer: string(systemPrompt),
-		ChatID:        chatIDs[0],
+		ChatID:        chatIDs[0].ID,
 		AuthorID:      charIDs[0],
 	})
 
 	if err != nil {
 		fmt.Println(err)
+	}
+
+	char1, _ := dbQueries.AddCharacter(context.Background(), database.AddCharacterParams{
+		Name: "Kathi",
+	})
+	char2, _ := dbQueries.AddCharacter(context.Background(), database.AddCharacterParams{
+		Name: "Sascha",
+	})
+	dbQueries.AddCharacter(context.Background(), database.AddCharacterParams{
+		Name: "Peter",
+	})
+
+	chat, _ := dbQueries.AddChat(context.Background(), "UnserChat")
+	dbQueries.SubscribeToChat(context.Background(), database.SubscribeToChatParams{
+		ChatID:      chat.ID,
+		CharacterID: char1.ID,
+	})
+	dbQueries.SubscribeToChat(context.Background(), database.SubscribeToChatParams{
+		ChatID:      chat.ID,
+		CharacterID: char2.ID,
+	})
+
+	//chats, _ := dbQueries.GetChatsLikeName(context.Background(), "%Unser%")
+
+	characters, _ := dbQueries.GetCharactersInChatByChatID(context.Background(), chat.ID)
+
+	for _, char := range characters {
+		fmt.Printf("Character: %s\n", char.Name)
+	}
+
+	if true {
+		return
 	}
 
 	for {
@@ -90,7 +123,7 @@ func main() {
 		users, _ := dbQueries.GetCharactersLikeName(context.Background(), "%user%")
 		dbQueries.AddMessage(context.Background(), database.AddMessageParams{
 			ContentAnswer: string(input),
-			ChatID:        chatIDs[0],
+			ChatID:        chatIDs[0].ID,
 			AuthorID:      users[0],
 		})
 		chunks, errs := provider.CompletionStream(ctx, anyllm.CompletionParams{
@@ -102,7 +135,7 @@ func main() {
 		messages = append(messages, anyllm.Message{Role: anyllm.RoleAssistant, Content: answer})
 		dbQueries.AddMessage(context.Background(), database.AddMessageParams{
 			ContentAnswer: string(answer),
-			ChatID:        chatIDs[0],
+			ChatID:        chatIDs[0].ID,
 			AuthorID:      charIDs[0],
 		})
 

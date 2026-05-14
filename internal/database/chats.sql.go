@@ -35,24 +35,48 @@ func (q *Queries) AddChat(ctx context.Context, name string) (Chat, error) {
 	return i, err
 }
 
+const getChatByID = `-- name: GetChatByID :one
+SELECT id, created_at, updated_at, deleted_at, name FROM chats
+WHERE id = $1
+`
+
+func (q *Queries) GetChatByID(ctx context.Context, id uuid.UUID) (Chat, error) {
+	row := q.db.QueryRowContext(ctx, getChatByID, id)
+	var i Chat
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Name,
+	)
+	return i, err
+}
+
 const getChatsLikeName = `-- name: GetChatsLikeName :many
-SELECT id FROM chats
+SELECT id, created_at, updated_at, deleted_at, name FROM chats
 WHERE name LIKE $1
 `
 
-func (q *Queries) GetChatsLikeName(ctx context.Context, name string) ([]uuid.UUID, error) {
+func (q *Queries) GetChatsLikeName(ctx context.Context, name string) ([]Chat, error) {
 	rows, err := q.db.QueryContext(ctx, getChatsLikeName, name)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []uuid.UUID
+	var items []Chat
 	for rows.Next() {
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
+		var i Chat
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.Name,
+		); err != nil {
 			return nil, err
 		}
-		items = append(items, id)
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err

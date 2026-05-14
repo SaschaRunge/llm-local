@@ -3,7 +3,7 @@ package cli
 import "fmt"
 
 func runCommandDebugDelete(ctx commandContext) error {
-	err := ctx.cli.DBQueries.DeleteMessages(ctx.context)
+	err := ctx.cli.DBQueries.DeleteMessages(ctx.cli.context)
 	if err != nil {
 		return err
 	}
