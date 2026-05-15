@@ -1,5 +1,5 @@
 -- name: AddMessage :one
-INSERT INTO messages(id, created_at, updated_at, content_thoughts, content_answer, chat_id, author_id)
+INSERT INTO messages(id, created_at, updated_at, content_thoughts, content_answer, chat_id, author_id, idx)
 VALUES (
     gen_random_uuid(),
     NOW(),
@@ -7,24 +7,28 @@ VALUES (
     $1,
     $2,
     $3,
-    $4
+    $4,
+    (SELECT COALESCE(MAX(idx), 0) + 1 FROM messages WHERE chat_id = $3)
 )
 RETURNING *;
 
 -- name: GetMessagesByChatID :many
 SELECT * FROM messages
-WHERE chat_id = $1;
+WHERE chat_id = $1
+ORDER BY idx ASC;
 
 -- name: GetChatHistory :many
 SELECT messages.id, 
 messages.content_thoughts, 
 messages.content_answer,
-messages.author_id, 
+messages.author_id,
+messages.idx, 
 characters.name AS author_name 
 FROM messages
 INNER JOIN characters
     ON messages.author_id = characters.id
-WHERE messages.chat_id = $1;
+WHERE messages.chat_id = $1
+ORDER BY idx ASC;
 
 
 -- name: DeleteMessages :exec

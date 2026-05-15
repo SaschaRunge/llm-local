@@ -13,7 +13,7 @@ import (
 )
 
 const addMessage = `-- name: AddMessage :one
-INSERT INTO messages(id, created_at, updated_at, content_thoughts, content_answer, chat_id, author_id)
+INSERT INTO messages(id, created_at, updated_at, content_thoughts, content_answer, chat_id, author_id, idx)
 VALUES (
     gen_random_uuid(),
     NOW(),
@@ -21,9 +21,10 @@ VALUES (
     $1,
     $2,
     $3,
-    $4
+    $4,
+    (SELECT COALESCE(MAX(idx), 0) + 1 FROM messages WHERE chat_id = $3)
 )
-RETURNING id, created_at, updated_at, deleted_at, content_thoughts, content_answer, chat_id, author_id
+RETURNING id, created_at, updated_at, deleted_at, content_thoughts, content_answer, chat_id, author_id, idx
 `
 
 type AddMessageParams struct {
@@ -50,6 +51,7 @@ func (q *Queries) AddMessage(ctx context.Context, arg AddMessageParams) (Message
 		&i.ContentAnswer,
 		&i.ChatID,
 		&i.AuthorID,
+		&i.Idx,
 	)
 	return i, err
 }
@@ -67,12 +69,14 @@ const getChatHistory = `-- name: GetChatHistory :many
 SELECT messages.id, 
 messages.content_thoughts, 
 messages.content_answer,
-messages.author_id, 
+messages.author_id,
+messages.idx, 
 characters.name AS author_name 
 FROM messages
 INNER JOIN characters
     ON messages.author_id = characters.id
 WHERE messages.chat_id = $1
+ORDER BY idx ASC
 `
 
 type GetChatHistoryRow struct {
@@ -80,6 +84,7 @@ type GetChatHistoryRow struct {
 	ContentThoughts sql.NullString
 	ContentAnswer   string
 	AuthorID        uuid.UUID
+	Idx             sql.NullInt64
 	AuthorName      string
 }
 
@@ -97,6 +102,7 @@ func (q *Queries) GetChatHistory(ctx context.Context, chatID uuid.UUID) ([]GetCh
 			&i.ContentThoughts,
 			&i.ContentAnswer,
 			&i.AuthorID,
+			&i.Idx,
 			&i.AuthorName,
 		); err != nil {
 			return nil, err
@@ -113,8 +119,9 @@ func (q *Queries) GetChatHistory(ctx context.Context, chatID uuid.UUID) ([]GetCh
 }
 
 const getMessagesByChatID = `-- name: GetMessagesByChatID :many
-SELECT id, created_at, updated_at, deleted_at, content_thoughts, content_answer, chat_id, author_id FROM messages
+SELECT id, created_at, updated_at, deleted_at, content_thoughts, content_answer, chat_id, author_id, idx FROM messages
 WHERE chat_id = $1
+ORDER BY idx ASC
 `
 
 func (q *Queries) GetMessagesByChatID(ctx context.Context, chatID uuid.UUID) ([]Message, error) {
@@ -135,6 +142,7 @@ func (q *Queries) GetMessagesByChatID(ctx context.Context, chatID uuid.UUID) ([]
 			&i.ContentAnswer,
 			&i.ChatID,
 			&i.AuthorID,
+			&i.Idx,
 		); err != nil {
 			return nil, err
 		}

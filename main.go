@@ -104,7 +104,7 @@ func main() {
 
 	//chats, _ := dbQueries.GetChatsLikeName(context.Background(), "%Unser%")
 
-	characters, _ := dbQueries.GetCharactersInChatByChatID(context.Background(), chat.ID)
+	characters, _ := dbQueries.GetCharactersInChat(context.Background(), chat.ID)
 
 	for _, char := range characters {
 		fmt.Printf("Character: %s\n", char.Name)

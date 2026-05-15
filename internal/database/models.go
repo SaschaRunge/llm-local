@@ -44,4 +44,5 @@ type Message struct {
 	ContentAnswer   string
 	ChatID          uuid.UUID
 	AuthorID        uuid.UUID
+	Idx             sql.NullInt64
 }

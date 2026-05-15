@@ -7,53 +7,35 @@ package database
 
 import (
 	"context"
-	"database/sql"
-	"time"
 
 	"github.com/google/uuid"
 )
 
-const getCharactersInChatByChatID = `-- name: GetCharactersInChatByChatID :many
-SELECT chat_subscriptions.id, chat_id, character_id, characters.id, created_at, updated_at, deleted_at, name, system_prompt, is_user FROM chat_subscriptions 
+const getCharactersInChat = `-- name: GetCharactersInChat :many
+SELECT 
+characters.id, 
+characters.name
+FROM chat_subscriptions 
 INNER JOIN characters
     ON chat_subscriptions.character_id = characters.id
 WHERE chat_subscriptions.chat_id = $1
 `
 
-type GetCharactersInChatByChatIDRow struct {
-	ID           uuid.UUID
-	ChatID       uuid.UUID
-	CharacterID  uuid.UUID
-	ID_2         uuid.UUID
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	DeletedAt    sql.NullTime
-	Name         string
-	SystemPrompt sql.NullString
-	IsUser       sql.NullBool
+type GetCharactersInChatRow struct {
+	ID   uuid.UUID
+	Name string
 }
 
-func (q *Queries) GetCharactersInChatByChatID(ctx context.Context, chatID uuid.UUID) ([]GetCharactersInChatByChatIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, getCharactersInChatByChatID, chatID)
+func (q *Queries) GetCharactersInChat(ctx context.Context, chatID uuid.UUID) ([]GetCharactersInChatRow, error) {
+	rows, err := q.db.QueryContext(ctx, getCharactersInChat, chatID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCharactersInChatByChatIDRow
+	var items []GetCharactersInChatRow
 	for rows.Next() {
-		var i GetCharactersInChatByChatIDRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.ChatID,
-			&i.CharacterID,
-			&i.ID_2,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
-			&i.Name,
-			&i.SystemPrompt,
-			&i.IsUser,
-		); err != nil {
+		var i GetCharactersInChatRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

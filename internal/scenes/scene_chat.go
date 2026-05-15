@@ -49,7 +49,7 @@ func (c *SceneChat) loadData(runtime core.Runtime) error {
 		return err
 	}
 
-	characters, err := db.GetCharactersInChatByChatID(runtime.Context(), c.ID)
+	characters, err := db.GetCharactersInChat(runtime.Context(), c.ID)
 	if err != nil {
 		return err
 	}

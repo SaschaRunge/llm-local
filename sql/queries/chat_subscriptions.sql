@@ -6,8 +6,11 @@ VALUES(
     $2
 );
 
--- name: GetCharactersInChatByChatID :many
-SELECT * FROM chat_subscriptions 
+-- name: GetCharactersInChat :many
+SELECT 
+characters.id, 
+characters.name
+FROM chat_subscriptions 
 INNER JOIN characters
     ON chat_subscriptions.character_id = characters.id
 WHERE chat_subscriptions.chat_id = $1;
