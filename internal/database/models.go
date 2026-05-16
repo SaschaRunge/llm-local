@@ -46,5 +46,3 @@ type Message struct {
 	AuthorID        uuid.UUID
 	Idx             sql.NullInt64
 }
-
-//this is a test 12375

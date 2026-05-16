@@ -35,7 +35,7 @@ func (r *mockRuntime) Context() context.Context {
 func (r *mockRuntime) DB() *database.Queries {
 	return r.db
 }
-func (r *mockRuntime) ExecuteCommand(input string) (core.Scene, error) {
+func (r *mockRuntime) Handle(input string) (core.Scene, error) {
 	if input == "/exit" {
 		return &mockScene{}, nil
 	}

@@ -5,7 +5,7 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/core"
 )
 
-func runCommandDebugDelete(ctx commandContext) (core.Scene, error) {
+func executeCommandDebugDelete(ctx commandContext) (core.Scene, error) {
 	err := ctx.cli.DBQueries.DeleteMessages(ctx.cli.context)
 	if err != nil {
 		return nil, err

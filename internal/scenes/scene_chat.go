@@ -40,8 +40,9 @@ func NewSceneChat(runtime core.Runtime, chat database.Chat) (SceneChat, error) {
 	return sceneChat, nil
 }
 
+// TODO: get rid of handle
 func (c *SceneChat) Execute(userInput string) (core.Scene, error) {
-	next, err := c.runtime.ExecuteCommand(userInput)
+	next, err := c.runtime.Handle(userInput)
 	if next != nil || err != nil {
 		return next, err
 	}

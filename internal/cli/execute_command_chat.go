@@ -7,7 +7,7 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/scenes"
 )
 
-func runCommandChat(ctx commandContext) (core.Scene, error) {
+func executeCommandChat(ctx commandContext) (core.Scene, error) {
 	chats, err := ctx.cli.DBQueries.GetChatsLikeName(ctx.cli.context, ctx.args[0])
 	if err != nil {
 		return nil, err
