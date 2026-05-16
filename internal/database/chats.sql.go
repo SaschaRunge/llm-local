@@ -35,6 +35,39 @@ func (q *Queries) AddChat(ctx context.Context, name string) (Chat, error) {
 	return i, err
 }
 
+const getAllChats = `-- name: GetAllChats :many
+SELECT id, created_at, updated_at, deleted_at, name FROM chats
+`
+
+func (q *Queries) GetAllChats(ctx context.Context) ([]Chat, error) {
+	rows, err := q.db.QueryContext(ctx, getAllChats)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Chat
+	for rows.Next() {
+		var i Chat
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getChatByID = `-- name: GetChatByID :one
 SELECT id, created_at, updated_at, deleted_at, name FROM chats
 WHERE id = $1

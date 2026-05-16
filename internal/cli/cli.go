@@ -29,7 +29,7 @@ type command struct {
 	name               string
 	description        string
 	usage              string
-	callback           func(commandContext) error
+	callback           func(commandContext) (core.Scene, error)
 	requiredScene      core.Scene
 	minAmountArguments int
 	maxAmountArguments int
@@ -69,29 +69,30 @@ func (c *Cli) GetInput() string {
 
 func (c *Cli) ExecuteCommand(input string) (core.Scene, error) {
 	cmd, args := parseInput(input)
-	err := c.RunCommand(cmd, args)
+	scene, err := c.RunCommand(cmd, args)
+	//TODO: exempt pure chat prompts
 	if err != nil {
 		return nil, err
 	}
 	//TODO: implement logic
-	return nil, nil
+	return scene, nil
 }
 
-func (c *Cli) RunCommand(cmdName string, args []string) error {
+func (c *Cli) RunCommand(cmdName string, args []string) (core.Scene, error) {
 	cmd, exists := c.CommandRegistry[cmdName]
 	if !exists {
-		return fmt.Errorf("%s is not a valid command.", cmdName)
+		return nil, fmt.Errorf("unknown command %q: %w", cmdName, core.ErrNotACommand)
 	}
 
 	if len(args) < cmd.minAmountArguments {
-		return fmt.Errorf("Not enough arguments in %s command. Usage: %s", cmd.name, cmd.usage)
+		return nil, fmt.Errorf("not enough arguments in %q command. usage: %q", cmd.name, cmd.usage)
 	}
 	if len(args) > cmd.maxAmountArguments {
-		return fmt.Errorf("To many arguments in %s command. Usage: %s", cmd.name, cmd.usage)
+		return nil, fmt.Errorf("to many arguments in %q command. usage: %q", cmd.name, cmd.usage)
 	}
 
 	if cmd.requiredScene != c.Scene {
-		return fmt.Errorf("Command %s not available in current context.", cmd.name)
+		return nil, fmt.Errorf("command %q not available in current context.", cmd.name)
 	}
 
 	ctx := commandContext{

@@ -16,6 +16,13 @@ import (
 	_ "github.com/lib/pq"
 )
 
+type mockScene struct {
+}
+
+func (s *mockScene) Execute(string) (core.Scene, error) {
+	return nil, nil
+}
+
 type mockRuntime struct {
 	db      *database.Queries
 	inputs  []string
@@ -29,8 +36,13 @@ func (r *mockRuntime) DB() *database.Queries {
 	return r.db
 }
 func (r *mockRuntime) ExecuteCommand(input string) (core.Scene, error) {
+	if input == "/exit" {
+		return &mockScene{}, nil
+	}
 	return nil, nil
 }
+
+/*
 func (r *mockRuntime) GetInput() string {
 	if len(r.inputs) == 0 {
 		return ""
@@ -39,13 +51,20 @@ func (r *mockRuntime) GetInput() string {
 		r.counter += 1
 	}()
 	return r.inputs[r.counter%len(r.inputs)]
-}
+}*/
 
 func TestSceneChat(t *testing.T) {
-	dbQueries, sceneChat := setup(t,
+	dbQueries := setupChat(t,
 		[]string{"Mexico", "Wunderland"},
 		[]string{"Dickerchen", "Traube", "Wuerstchen", "Stubenhocker"})
 	runtime := &mockRuntime{db: dbQueries, inputs: []string{"test1", "test2", "test3"}}
+
+	chats, err := dbQueries.GetAllChats(runtime.Context())
+	if err != nil {
+		t.Fatalf("setup: failed fetch chats: %v", err)
+	}
+
+	sceneChat, err := NewSceneChat(runtime, chats[0])
 
 	authors, err := dbQueries.GetCharactersInChat(runtime.Context(), sceneChat.ID)
 	if err != nil {
@@ -84,7 +103,7 @@ func TestSceneChat(t *testing.T) {
 		}
 	}
 
-	err = sceneChat.loadData(runtime)
+	err = sceneChat.loadData()
 	if err != nil {
 		t.Errorf("failed to load data into sceneChat: %v", err)
 	}
@@ -102,9 +121,20 @@ func TestSceneChat(t *testing.T) {
 			t.Errorf("mismatch at message %d. Got %q, expected %q.", i, expected[i], msg.contentAnswer)
 		}
 	}
+
+	runtime.inputs = []string{"gibberish", "more gibberish", "/exit"}
+	for i := range len(runtime.inputs) {
+		sceneTest, err := sceneChat.Execute(runtime.inputs[i])
+		if err != nil {
+			t.Errorf("unexpected error during sceneChat.Run: %v", err)
+		}
+		if sceneTest == nil {
+			t.Errorf("sceneChat.Run exited without returning a new scene")
+		}
+	}
 }
 
-func setup(t *testing.T, chatNames, characterNames []string) (*database.Queries, SceneChat) {
+func setupChat(t *testing.T, chatNames, characterNames []string) *database.Queries {
 	db := loadDatabase(t)
 	clearDatabase(t, db)
 	dbQueries := database.New(db)
@@ -137,12 +167,7 @@ func setup(t *testing.T, chatNames, characterNames []string) (*database.Queries,
 		}
 	}
 
-	sceneChat := SceneChat{
-		ID:   chats[0].ID,
-		Name: chats[0].Name,
-	}
-
-	return dbQueries, sceneChat
+	return dbQueries
 }
 
 func loadDatabase(t *testing.T) *sql.DB {

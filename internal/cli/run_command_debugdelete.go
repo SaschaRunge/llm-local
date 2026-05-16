@@ -1,13 +1,16 @@
 package cli
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/SaschaRunge/llm-local/internal/core"
+)
 
-func runCommandDebugDelete(ctx commandContext) error {
+func runCommandDebugDelete(ctx commandContext) (core.Scene, error) {
 	err := ctx.cli.DBQueries.DeleteMessages(ctx.cli.context)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fmt.Println("Debug Delete Messages.")
-	return nil
+	return nil, nil
 }

@@ -2,6 +2,7 @@ package scenes
 
 import (
 	"github.com/SaschaRunge/llm-local/internal/core"
+	"github.com/SaschaRunge/llm-local/internal/database"
 
 	"github.com/google/uuid"
 )
@@ -11,6 +12,7 @@ type SceneChat struct {
 	characters []character
 	ID         uuid.UUID
 	Name       string
+	runtime    core.Runtime
 }
 
 type message struct {
@@ -26,30 +28,38 @@ type character struct {
 	name string
 }
 
-func (c *SceneChat) Run(runtime core.Runtime) (core.Scene, error) {
-	err := c.loadData(runtime)
-	if err != nil {
-		return nil, err
+func NewSceneChat(runtime core.Runtime, chat database.Chat) (SceneChat, error) {
+	sceneChat := SceneChat{
+		runtime: runtime,
+		ID:      chat.ID,
+		Name:    chat.Name}
+	if err := sceneChat.loadData(); err != nil {
+		return SceneChat{}, err
 	}
 
-	for {
-		userInput := runtime.GetInput()
-		next, err := runtime.ExecuteCommand(userInput)
-		if next != nil || err != nil {
-			return next, err
-		}
-	}
+	return sceneChat, nil
 }
 
-func (c *SceneChat) loadData(runtime core.Runtime) error {
-	db := runtime.DB()
+func (c *SceneChat) Execute(userInput string) (core.Scene, error) {
+	next, err := c.runtime.ExecuteCommand(userInput)
+	if next != nil || err != nil {
+		return next, err
+	}
 
-	messages, err := db.GetChatHistory(runtime.Context(), c.ID)
+	//TODO: llm logic
+
+	return c, nil
+}
+
+func (c *SceneChat) loadData() error {
+	db := c.runtime.DB()
+
+	messages, err := db.GetChatHistory(c.runtime.Context(), c.ID)
 	if err != nil {
 		return err
 	}
 
-	characters, err := db.GetCharactersInChat(runtime.Context(), c.ID)
+	characters, err := db.GetCharactersInChat(c.runtime.Context(), c.ID)
 	if err != nil {
 		return err
 	}

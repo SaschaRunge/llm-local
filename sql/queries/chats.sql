@@ -15,3 +15,6 @@ WHERE id = $1;
 -- name: GetChatsLikeName :many
 SELECT * FROM chats
 WHERE name LIKE $1;
+
+-- name: GetAllChats :many
+SELECT * FROM chats;
