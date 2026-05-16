@@ -12,11 +12,14 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/database"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
+
 	_ "github.com/lib/pq"
 )
 
 type mockRuntime struct {
-	db *database.Queries
+	db      *database.Queries
+	inputs  []string
+	counter int
 }
 
 func (r *mockRuntime) Context() context.Context {
@@ -29,14 +32,20 @@ func (r *mockRuntime) ExecuteCommand(input string) (core.Scene, error) {
 	return nil, nil
 }
 func (r *mockRuntime) GetInput() string {
-	return ""
+	if len(r.inputs) == 0 {
+		return ""
+	}
+	defer func() {
+		r.counter += 1
+	}()
+	return r.inputs[r.counter%len(r.inputs)]
 }
 
 func TestSceneChat(t *testing.T) {
 	dbQueries, sceneChat := setup(t,
 		[]string{"Mexico", "Wunderland"},
 		[]string{"Dickerchen", "Traube", "Wuerstchen", "Stubenhocker"})
-	runtime := &mockRuntime{db: dbQueries}
+	runtime := &mockRuntime{db: dbQueries, inputs: []string{"test1", "test2", "test3"}}
 
 	authors, err := dbQueries.GetCharactersInChat(runtime.Context(), sceneChat.ID)
 	if err != nil {
@@ -49,19 +58,26 @@ func TestSceneChat(t *testing.T) {
 		authors[3].ID: {"Stubenhocker1", "Stubenhocker2", "Stubenhocker3"},
 	}
 
-	for i := range 4 {
-		for k, v := range messagesByAuthor {
-			if i >= len(v) {
+	orderedAuthors := []uuid.UUID{
+		authors[0].ID,
+		authors[2].ID,
+		authors[3].ID,
+	}
+
+	for i := range authors[0].ID {
+		for _, authorID := range orderedAuthors {
+			msgByAuthor := messagesByAuthor[authorID]
+			if i >= len(msgByAuthor) {
 				continue
 			}
 
 			_, err := dbQueries.AddMessage(runtime.Context(), database.AddMessageParams{
-				ContentAnswer: v[i],
-				AuthorID:      k,
+				ContentAnswer: msgByAuthor[i],
+				AuthorID:      authorID,
 				ChatID:        sceneChat.ID,
 			})
 			if err != nil {
-				t.Fatalf("failed to add message %q to chat %q with err %v", v[i], sceneChat.Name, err)
+				t.Fatalf("failed to add message %q to chat %q with err %v", msgByAuthor[i], sceneChat.Name, err)
 			}
 
 			//t.Logf("added message %q\n", msg.ContentAnswer)

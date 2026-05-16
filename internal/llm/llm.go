@@ -5,17 +5,17 @@ import (
 	"github.com/mozilla-ai/any-llm-go/providers/llamacpp"
 )
 
-type LLM struct {
+type Client struct {
 	provider *llamacpp.Provider
 }
 
-func (l *LLM) load() error {
+func (c *Client) load() error {
 	provider, err := llamacpp.New()
 	if err != nil {
 		return err
 	}
 
-	l.provider = provider
+	c.provider = provider
 
 	return nil
 }
