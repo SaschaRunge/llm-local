@@ -33,7 +33,7 @@ type AddMessageParams struct {
 	ContentAnswer   string
 	ChatID          uuid.UUID
 	AuthorID        uuid.UUID
-	Role            sql.NullString
+	Role            string
 }
 
 func (q *Queries) AddMessage(ctx context.Context, arg AddMessageParams) (Message, error) {
@@ -88,7 +88,7 @@ type GetChatHistoryRow struct {
 	ContentThoughts sql.NullString
 	ContentAnswer   string
 	AuthorID        uuid.UUID
-	Role            sql.NullString
+	Role            string
 	AuthorName      string
 }
 

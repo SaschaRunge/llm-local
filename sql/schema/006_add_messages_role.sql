@@ -1,7 +1,7 @@
 -- +goose Up
 ALTER TABLE messages
-ADD role TEXT;
+ADD role TEXT NOT NULL;
 
 -- +goose Down
-ALTER TABLE
+ALTER TABLE messages
 DROP COLUMN role;
