@@ -23,7 +23,7 @@ SELECT messages.id,
 messages.content_thoughts, 
 messages.content_answer,
 messages.author_id,
-messages.idx, 
+messages.role,
 characters.name AS author_name 
 FROM messages
 INNER JOIN characters

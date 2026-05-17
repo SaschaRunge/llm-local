@@ -74,7 +74,7 @@ SELECT messages.id,
 messages.content_thoughts, 
 messages.content_answer,
 messages.author_id,
-messages.idx, 
+messages.role,
 characters.name AS author_name 
 FROM messages
 INNER JOIN characters
@@ -88,7 +88,7 @@ type GetChatHistoryRow struct {
 	ContentThoughts sql.NullString
 	ContentAnswer   string
 	AuthorID        uuid.UUID
-	Idx             sql.NullInt64
+	Role            sql.NullString
 	AuthorName      string
 }
 
@@ -106,7 +106,7 @@ func (q *Queries) GetChatHistory(ctx context.Context, chatID uuid.UUID) ([]GetCh
 			&i.ContentThoughts,
 			&i.ContentAnswer,
 			&i.AuthorID,
-			&i.Idx,
+			&i.Role,
 			&i.AuthorName,
 		); err != nil {
 			return nil, err
