@@ -119,8 +119,8 @@ func TestSceneChat(t *testing.T) {
 		t.Errorf("fetched %d messages, expected %d:", len(sceneChat.messages), len(expected))
 	}
 	for i, msg := range sceneChat.messages {
-		if msg.contentAnswer != expected[i] {
-			t.Errorf("mismatch at message %d. Got %q, expected %q.", i, expected[i], msg.contentAnswer)
+		if msg.content != expected[i] {
+			t.Errorf("mismatch at message %d. Got %q, expected %q.", i, expected[i], msg.content)
 		}
 	}
 

@@ -65,7 +65,7 @@ func New(dbQueries *database.Queries) *Cli {
 	}
 }
 
-// Implements Runtime
+// Implements core.Runtime
 func (c *Cli) Context() context.Context {
 	return c.context
 }
