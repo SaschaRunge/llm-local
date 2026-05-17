@@ -54,7 +54,8 @@ func NewSceneChat(runtime core.Runtime, chat database.Chat) (*SceneChat, error) 
 		messageHistory = append(messageHistory, newMessage)
 	}
 
-	llmClient, err := llm.NewClient(messageHistory)
+	//TODO: do not hardcode model type
+	llmClient, err := llm.NewClient("qwen3.6-27b")
 	sceneChat.llmClient = llmClient
 
 	if err != nil {
@@ -66,19 +67,11 @@ func NewSceneChat(runtime core.Runtime, chat database.Chat) (*SceneChat, error) 
 
 // TODO: get rid of handle
 func (c *SceneChat) Execute(userInput string) (core.SceneResult, error) {
-	next, err := c.runtime.Handle(userInput)
-	if next != nil || err != nil {
-		return core.SceneResult{
-			Response:  "",
-			NextScene: next,
-		}, err
-	}
-
-	//TODO: llm logic
 
 	return core.SceneResult{
 		Response:  "",
-		NextScene: c}, nil
+		NextScene: c,
+	}, nil
 }
 
 func (c *SceneChat) GetName() string {
@@ -130,7 +123,7 @@ func translateToChatMessage(msg communication.Message) chatMessage {
 func translateToCommunicationMessage(msg chatMessage) (communication.Message, error) {
 	role := communication.Role(msg.role)
 	if !role.IsValid() {
-		return communication.Message{}, fmt.Errorf("unable to map role field to communication.role")
+		return communication.Message{}, fmt.Errorf("message role %q is not a valid role", msg.role)
 	}
 
 	return communication.Message{

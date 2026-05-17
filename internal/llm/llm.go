@@ -14,59 +14,62 @@ import (
 const pathToSystemPrompt = "./system_prompt.md"
 
 type Client struct {
-	messageHistory []anyllm.Message
-	model          string
-	provider       *llamacpp.Provider
+	model    string
+	provider *llamacpp.Provider
 }
 
 // TODO: create client with empty history
-func NewClient(messageHistory []communication.Message) (*Client, error) {
+func NewClient(model string) (*Client, error) {
 	client := &Client{}
-	if err := client.load(messageHistory); err != nil {
+	if err := client.load(model); err != nil {
 		return &Client{}, err
 	}
 
 	return client, nil
 }
 
-func (c *Client) load(messageHistory []communication.Message) error {
+func (c *Client) load(model string) error {
 	provider, err := llamacpp.New()
 	if err != nil {
 		return err
 	}
 
 	c.provider = provider
+	c.model = model
 
-	if len(messageHistory) == 0 {
-		systemPrompt, err := loadSystemPrompt()
-		if err != nil {
-			return err
-		}
-		c.messageHistory = append(c.messageHistory, anyllm.Message{
-			Role:    anyllm.RoleSystem,
-			Content: systemPrompt,
-		})
-	}
-
-	for i, message := range messageHistory {
-		if i == 0 {
-			if message.Role != anyllm.RoleSystem {
-				return fmt.Errorf("unable to load llm client: first message in history is not system prompt")
+	/*
+		if len(messageHistory) == 0 {
+			systemPrompt, err := loadSystemPrompt()
+			if err != nil {
+				return err
 			}
+			c.messageHistory = append(c.messageHistory, anyllm.Message{
+				Role:    anyllm.RoleSystem,
+				Content: systemPrompt,
+			})
 		}
-		c.messageHistory = append(c.messageHistory, translate(message))
-	}
+
+		for i, message := range messageHistory {
+			if i == 0 {
+				if message.Role != anyllm.RoleSystem {
+					return fmt.Errorf("unable to load llm client: first message in history is not system prompt")
+				}
+			}
+			c.messageHistory = append(c.messageHistory, translate(message))
+		}*/
 
 	return nil
 }
 
-func (c *Client) GenerateAnswer(input string) (string, error) {
+func (c *Client) GenerateAnswer(messageHistory []communication.Message) (string, error) {
+	anyllmMessageHistory, err := translateHistory(messageHistory)
+	if err != nil {
+		return "", nil
+	}
+
 	response, err := c.provider.Completion(context.Background(), anyllm.CompletionParams{
-		Model: "qwen3.6-27b",
-		Messages: append(c.messageHistory, anyllm.Message{
-			Content: input,
-			Role:    anyllm.RoleUser,
-		}),
+		Model:    c.model,
+		Messages: anyllmMessageHistory,
 	})
 
 	if err != nil || len(response.Choices) == 0 {
@@ -80,12 +83,38 @@ func (c *Client) StreamAnswer(input string) string {
 	return ""
 }
 
-func translate(message communication.Message) anyllm.Message {
+func translate(message communication.Message) (anyllm.Message, error) {
+	if !roleIsValid(message.Role) {
+		return anyllm.Message{}, fmt.Errorf("message role %q is not a valid role", message.Role)
+	}
 	return anyllm.Message{
 		Name:    message.Name,
 		Role:    string(message.Role),
 		Content: message.Content,
 		//Reasoning: message.Reasoning, //TODO: might need specific mapping, not sure yet
+	}, nil
+}
+
+func translateHistory(messageHistory []communication.Message) ([]anyllm.Message, error) {
+	anyllmMessageHistory := []anyllm.Message{}
+	for _, message := range messageHistory {
+		anyllmMessage, err := translate(message)
+		if err != nil {
+			return []anyllm.Message{}, err
+		}
+
+		anyllmMessageHistory = append(anyllmMessageHistory, anyllmMessage)
+	}
+
+	return anyllmMessageHistory, nil
+}
+
+func roleIsValid(role communication.Role) bool {
+	switch role {
+	case anyllm.RoleSystem, anyllm.RoleAssistant, anyllm.RoleUser:
+		return true
+	default:
+		return false
 	}
 }
 
