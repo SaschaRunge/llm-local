@@ -115,10 +115,10 @@ func TestSceneChat(t *testing.T) {
 	}*/
 
 	expected := []string{"Dickerchen1", "Wuerstchen1", "Stubenhocker1", "Dickerchen2", "Wuerstchen2", "Stubenhocker2", "Dickerchen3", "Stubenhocker3", "Dickerchen4"}
-	if len(sceneChat.messages) != len(expected) {
-		t.Errorf("fetched %d messages, expected %d:", len(sceneChat.messages), len(expected))
+	if len(sceneChat.cachedMessages) != len(expected) {
+		t.Errorf("fetched %d messages, expected %d:", len(sceneChat.cachedMessages), len(expected))
 	}
-	for i, msg := range sceneChat.messages {
+	for i, msg := range sceneChat.cachedMessages {
 		if msg.content != expected[i] {
 			t.Errorf("mismatch at message %d. Got %q, expected %q.", i, expected[i], msg.content)
 		}

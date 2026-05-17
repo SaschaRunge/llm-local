@@ -12,21 +12,18 @@ import (
 )
 
 type SceneChat struct {
-	messages   []chatMessage
-	characters []character
-	ID         uuid.UUID
-	Name       string
-	runtime    core.Runtime
-	llmClient  *llm.Client
+	cachedMessages []cachedMessage
+	characters     []character
+	ID             uuid.UUID
+	Name           string
+	runtime        core.Runtime
+	llmClient      *llm.Client
 }
 
-type chatMessage struct {
-	id         uuid.UUID
-	authorID   uuid.UUID
-	authorName string
-	reasoning  string
-	content    string
-	role       string
+type cachedMessage struct {
+	id       uuid.UUID
+	authorID uuid.UUID
+	communication.Message
 }
 
 type character struct {
@@ -43,15 +40,6 @@ func NewSceneChat(runtime core.Runtime, chat database.Chat) (*SceneChat, error) 
 
 	if err := sceneChat.loadData(); err != nil {
 		return &SceneChat{}, err
-	}
-
-	messageHistory := []communication.Message{}
-	for _, message := range sceneChat.messages {
-		newMessage, err := translateToCommunicationMessage(message)
-		if err != nil {
-			return &SceneChat{}, err
-		}
-		messageHistory = append(messageHistory, newMessage)
 	}
 
 	//TODO: do not hardcode model type
@@ -99,37 +87,26 @@ func (c *SceneChat) loadData() error {
 	}
 
 	for _, msg := range messages {
-		c.messages = append(c.messages, chatMessage{
-			id:         msg.ID,
-			authorID:   msg.AuthorID,
-			authorName: msg.AuthorName,
-			reasoning:  msg.ContentThoughts.String,
-			content:    msg.ContentAnswer,
-			role:       msg.Role,
-		})
+		role := communication.Role(msg.Role)
+		if !role.IsValid() {
+			return fmt.Errorf("message role %q is not a valid role", role)
+		}
+		cachedMessage := cachedMessage{
+			id:       msg.ID,
+			authorID: msg.AuthorID,
+			Message: communication.Message{
+				Name:      msg.AuthorName,
+				Role:      role,
+				Reasoning: msg.ContentThoughts.String,
+				Content:   msg.ContentAnswer,
+			},
+		}
+		c.cachedMessages = append(c.cachedMessages, cachedMessage)
 	}
 
 	return nil
 }
 
-func translateToChatMessage(msg communication.Message) chatMessage {
-	return chatMessage{
-		authorName: msg.Name,
-		reasoning:  msg.Reasoning,
-		content:    msg.Content,
-	}
-}
-
-func translateToCommunicationMessage(msg chatMessage) (communication.Message, error) {
-	role := communication.Role(msg.role)
-	if !role.IsValid() {
-		return communication.Message{}, fmt.Errorf("message role %q is not a valid role", msg.role)
-	}
-
-	return communication.Message{
-		Name:      msg.authorName,
-		Reasoning: msg.reasoning,
-		Content:   msg.content,
-		Role:      role,
-	}, nil
+func (c *SceneChat) writeToHistory() error {
+	return nil
 }
