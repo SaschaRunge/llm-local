@@ -3,6 +3,7 @@ package cli
 import (
 	"bufio"
 	"context"
+	_ "errors"
 	"fmt"
 	"os"
 	"strings"
@@ -14,7 +15,15 @@ import (
 
 const (
 	CmdChat        = "/chat"
+	CmdChats       = "/chats"
 	CmdDebugDelete = "/debugdelete"
+	CmdExit        = "/exit"
+	CmdLobby       = "/lobby"
+)
+
+const (
+	Greeting = "Welcome to llm-local."
+	Goodbye  = "Closing... . Goodbye."
 )
 
 type Cli struct {
@@ -51,6 +60,8 @@ func New(dbQueries *database.Queries) *Cli {
 		CommandRegistry: getRegistry(),
 		DBQueries:       dbQueries,
 		scanner:         bufio.NewScanner(os.Stdin),
+		context:         context.Background(),
+		CurrentScene:    &scenes.SceneLobby{},
 	}
 }
 
@@ -75,7 +86,7 @@ func (c *Cli) Handle(input string) (core.Scene, error) {
 		case *scenes.SceneChat:
 			return c.CurrentScene, nil
 		default:
-			return nil, core.ErrNotACommand
+			return nil, fmt.Errorf("unknown command %q: %w", input, core.ErrNotACommand)
 		}
 	}
 
@@ -110,15 +121,21 @@ func (c *Cli) Execute(cmdName string, args []string) (core.Scene, error) {
 }
 
 func (c *Cli) Run() error {
+	fmt.Println("=== " + Greeting + " ===")
+	fmt.Printf("Entering %s:\n", c.CurrentScene.GetName())
+
 	for {
 		userInput := c.GetInput()
-		currentScene, err := c.Handle(userInput)
+		nextScene, err := c.Handle(userInput)
 		if err != nil {
 			// TODO: implement error handling/output via cleanOutput
-			fmt.Println(err.Error())
+			fmt.Println(err)
 			continue
 		}
-		c.CurrentScene = currentScene
+		if nextScene != c.CurrentScene {
+			fmt.Printf("Entering %s:\n", nextScene.GetName())
+		}
+		c.CurrentScene = nextScene
 	}
 }
 
@@ -146,11 +163,35 @@ func getRegistry() map[string]command {
 			minAmountArguments: 1,
 			maxAmountArguments: 1,
 		},
+		CmdChats: {
+			name:               CmdChats,
+			description:        "Shows the available chats for the current user.",
+			usage:              fmt.Sprintf("%s", CmdChats),
+			callback:           executeCommandChats,
+			minAmountArguments: 0,
+			maxAmountArguments: 0,
+		},
 		CmdDebugDelete: {
 			name:               CmdDebugDelete,
 			description:        "Deletes the current chat's history.",
 			usage:              fmt.Sprintf("%s", CmdChat),
 			callback:           executeCommandDebugDelete,
+			minAmountArguments: 0,
+			maxAmountArguments: 0,
+		},
+		CmdExit: {
+			name:               CmdExit,
+			description:        "Exits the program.",
+			usage:              fmt.Sprintf("%s", CmdExit),
+			callback:           executeCommandExit,
+			minAmountArguments: 0,
+			maxAmountArguments: 0,
+		},
+		CmdLobby: {
+			name:               CmdLobby,
+			description:        "Enters the lobby.",
+			usage:              fmt.Sprintf("%s", CmdLobby),
+			callback:           executeCommandLobby,
 			minAmountArguments: 0,
 			maxAmountArguments: 0,
 		},

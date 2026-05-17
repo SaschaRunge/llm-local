@@ -1,23 +1,29 @@
 package main
 
-import _ "github.com/lib/pq"
-
 import (
-	"bufio"
-	"context"
+	_ "github.com/lib/pq"
+
+	_ "bufio"
+
+	_ "context"
+
 	"database/sql"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 
+	"github.com/SaschaRunge/llm-local/internal/cli"
 	_ "github.com/SaschaRunge/llm-local/internal/cli"
 	"github.com/SaschaRunge/llm-local/internal/database"
 
-	"github.com/google/uuid"
+	_ "github.com/google/uuid"
+
 	"github.com/joho/godotenv"
+
 	anyllm "github.com/mozilla-ai/any-llm-go"
-	"github.com/mozilla-ai/any-llm-go/providers/llamacpp"
+
+	_ "github.com/mozilla-ai/any-llm-go/providers/llamacpp"
 )
 
 const pathToSystemPrompt = "./system_prompt.md"
@@ -25,7 +31,7 @@ const colorGrey = "\033[2m"
 const colorReset = "\033[0m"
 
 func main() {
-	ctx := context.Background()
+	//ctx := context.Background()
 
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
@@ -38,108 +44,113 @@ func main() {
 
 	dbQueries := database.New(db)
 
-	//ui := cli.New(dbQueries)
+	ui := cli.New(dbQueries)
+	ui.Run()
 
-	scanner := bufio.NewScanner(os.Stdin)
-	scanner.Scan()
-	//input := scanner.Text()
 	/*
+		//ui := cli.New(dbQueries)
 
-		_, err = ui.ExecuteCommand(input)
-		if err != nil {
-			fmt.Printf("Unable to run command %s: %s", input, err)
-		} */
-
-	provider, err := llamacpp.New()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	systemPrompt, err := os.ReadFile(pathToSystemPrompt)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	messages := []anyllm.Message{
-		{Role: anyllm.RoleSystem, Content: string(systemPrompt)},
-	}
-
-	//authorIDSystem := uuid.New()
-	_ = uuid.New()
-
-	charIDs, err := dbQueries.GetCharactersLikeName(context.Background(), "Toertchen")
-	chatIDs, err := dbQueries.GetChatsLikeName(context.Background(), "%test%")
-
-	//fmt.Printf("CHAT ID: %v", chatIDs)
-
-	_, err = dbQueries.AddMessage(context.Background(), database.AddMessageParams{
-		ContentAnswer: string(systemPrompt),
-		ChatID:        chatIDs[0].ID,
-		AuthorID:      charIDs[0],
-	})
-
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	char1, _ := dbQueries.AddCharacter(context.Background(), database.AddCharacterParams{
-		Name: "Kathi",
-	})
-	char2, _ := dbQueries.AddCharacter(context.Background(), database.AddCharacterParams{
-		Name: "Sascha",
-	})
-	dbQueries.AddCharacter(context.Background(), database.AddCharacterParams{
-		Name: "Peter",
-	})
-
-	chat, _ := dbQueries.AddChat(context.Background(), "UnserChat")
-	dbQueries.SubscribeToChat(context.Background(), database.SubscribeToChatParams{
-		ChatID:      chat.ID,
-		CharacterID: char1.ID,
-	})
-	dbQueries.SubscribeToChat(context.Background(), database.SubscribeToChatParams{
-		ChatID:      chat.ID,
-		CharacterID: char2.ID,
-	})
-
-	//chats, _ := dbQueries.GetChatsLikeName(context.Background(), "%Unser%")
-
-	characters, _ := dbQueries.GetCharactersInChat(context.Background(), chat.ID)
-
-	for _, char := range characters {
-		fmt.Printf("Character: %s\n", char.Name)
-	}
-
-	if true {
-		return
-	}
-
-	for {
-		fmt.Print("User:")
+		scanner := bufio.NewScanner(os.Stdin)
 		scanner.Scan()
-		input := scanner.Text()
-		message := anyllm.Message{Role: anyllm.RoleUser, Content: input}
-		messages = append(messages, message)
-		users, _ := dbQueries.GetCharactersLikeName(context.Background(), "%user%")
-		dbQueries.AddMessage(context.Background(), database.AddMessageParams{
-			ContentAnswer: string(input),
-			ChatID:        chatIDs[0].ID,
-			AuthorID:      users[0],
-		})
-		chunks, errs := provider.CompletionStream(ctx, anyllm.CompletionParams{
-			Model:    "qwen3.6-27b",
-			Messages: messages,
-		})
+		//input := scanner.Text()
+		/*
 
-		answer, _, _ := handleStream(chunks, errs)
-		messages = append(messages, anyllm.Message{Role: anyllm.RoleAssistant, Content: answer})
-		dbQueries.AddMessage(context.Background(), database.AddMessageParams{
-			ContentAnswer: string(answer),
+			_, err = ui.ExecuteCommand(input)
+			if err != nil {
+				fmt.Printf("Unable to run command %s: %s", input, err)
+			} */
+	/*
+		provider, err := llamacpp.New()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		systemPrompt, err := os.ReadFile(pathToSystemPrompt)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		messages := []anyllm.Message{
+			{Role: anyllm.RoleSystem, Content: string(systemPrompt)},
+		}
+
+		//authorIDSystem := uuid.New()
+		_ = uuid.New()
+
+		charIDs, err := dbQueries.GetCharactersLikeName(context.Background(), "Toertchen")
+		chatIDs, err := dbQueries.GetChatsLikeName(context.Background(), "%test%")
+
+		//fmt.Printf("CHAT ID: %v", chatIDs)
+
+		_, err = dbQueries.AddMessage(context.Background(), database.AddMessageParams{
+			ContentAnswer: string(systemPrompt),
 			ChatID:        chatIDs[0].ID,
 			AuthorID:      charIDs[0],
 		})
 
-	}
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		char1, _ := dbQueries.AddCharacter(context.Background(), database.AddCharacterParams{
+			Name: "Kathi",
+		})
+		char2, _ := dbQueries.AddCharacter(context.Background(), database.AddCharacterParams{
+			Name: "Sascha",
+		})
+		dbQueries.AddCharacter(context.Background(), database.AddCharacterParams{
+			Name: "Peter",
+		})
+
+		chat, _ := dbQueries.AddChat(context.Background(), "UnserChat")
+		dbQueries.SubscribeToChat(context.Background(), database.SubscribeToChatParams{
+			ChatID:      chat.ID,
+			CharacterID: char1.ID,
+		})
+		dbQueries.SubscribeToChat(context.Background(), database.SubscribeToChatParams{
+			ChatID:      chat.ID,
+			CharacterID: char2.ID,
+		})
+
+		//chats, _ := dbQueries.GetChatsLikeName(context.Background(), "%Unser%")
+
+		characters, _ := dbQueries.GetCharactersInChat(context.Background(), chat.ID)
+
+		for _, char := range characters {
+			fmt.Printf("Character: %s\n", char.Name)
+		}
+
+		if true {
+			return
+		}
+
+		for {
+			fmt.Print("User:")
+			scanner.Scan()
+			input := scanner.Text()
+			message := anyllm.Message{Role: anyllm.RoleUser, Content: input}
+			messages = append(messages, message)
+			users, _ := dbQueries.GetCharactersLikeName(context.Background(), "%user%")
+			dbQueries.AddMessage(context.Background(), database.AddMessageParams{
+				ContentAnswer: string(input),
+				ChatID:        chatIDs[0].ID,
+				AuthorID:      users[0],
+			})
+			chunks, errs := provider.CompletionStream(ctx, anyllm.CompletionParams{
+				Model:    "qwen3.6-27b",
+				Messages: messages,
+			})
+
+			answer, _, _ := handleStream(chunks, errs)
+			messages = append(messages, anyllm.Message{Role: anyllm.RoleAssistant, Content: answer})
+			dbQueries.AddMessage(context.Background(), database.AddMessageParams{
+				ContentAnswer: string(answer),
+				ChatID:        chatIDs[0].ID,
+				AuthorID:      charIDs[0],
+			})
+
+		}
+	*/
 }
 
 // this is not proper: very short thinks will break, </think> is not greyed and parts of the thoughts may leak in to the answer

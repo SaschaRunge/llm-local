@@ -18,5 +18,6 @@ type Runtime interface {
 }
 
 type Scene interface {
+	GetName() string
 	Execute(cmd string) (SceneResult, error)
 }

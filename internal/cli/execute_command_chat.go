@@ -15,6 +15,7 @@ func executeCommandChat(ctx commandContext) (core.Scene, error) {
 	if len(chats) == 0 {
 		return nil, fmt.Errorf("No chat with name '%s'.", ctx.args[0])
 	}
+
 	sceneChat, err := scenes.NewSceneChat(ctx.cli, chats[0])
 	if err != nil {
 		return nil, err

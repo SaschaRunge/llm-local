@@ -57,6 +57,10 @@ func (c *SceneChat) Execute(userInput string) (core.SceneResult, error) {
 		NextScene: c}, nil
 }
 
+func (c *SceneChat) GetName() string {
+	return "DummyScene"
+}
+
 func (c *SceneChat) loadData() error {
 	db := c.runtime.DB()
 

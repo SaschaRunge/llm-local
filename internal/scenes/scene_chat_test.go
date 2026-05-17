@@ -23,6 +23,10 @@ func (s *mockScene) Execute(string) (core.SceneResult, error) {
 	return core.SceneResult{}, nil
 }
 
+func (c *mockScene) GetName() string {
+	return "mockScene"
+}
+
 type mockRuntime struct {
 	db      *database.Queries
 	inputs  []string
