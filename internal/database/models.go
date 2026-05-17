@@ -45,4 +45,5 @@ type Message struct {
 	ChatID          uuid.UUID
 	AuthorID        uuid.UUID
 	Idx             sql.NullInt64
+	Role            sql.NullString
 }

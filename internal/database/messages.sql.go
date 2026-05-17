@@ -13,7 +13,7 @@ import (
 )
 
 const addMessage = `-- name: AddMessage :one
-INSERT INTO messages(id, created_at, updated_at, content_thoughts, content_answer, chat_id, author_id, idx)
+INSERT INTO messages(id, created_at, updated_at, content_thoughts, content_answer, chat_id, author_id, role, idx)
 VALUES (
     gen_random_uuid(),
     NOW(),
@@ -22,9 +22,10 @@ VALUES (
     $2,
     $3,
     $4,
+    $5,
     (SELECT COALESCE(MAX(idx), 0) + 1 FROM messages WHERE chat_id = $3)
 )
-RETURNING id, created_at, updated_at, deleted_at, content_thoughts, content_answer, chat_id, author_id, idx
+RETURNING id, created_at, updated_at, deleted_at, content_thoughts, content_answer, chat_id, author_id, idx, role
 `
 
 type AddMessageParams struct {
@@ -32,6 +33,7 @@ type AddMessageParams struct {
 	ContentAnswer   string
 	ChatID          uuid.UUID
 	AuthorID        uuid.UUID
+	Role            sql.NullString
 }
 
 func (q *Queries) AddMessage(ctx context.Context, arg AddMessageParams) (Message, error) {
@@ -40,6 +42,7 @@ func (q *Queries) AddMessage(ctx context.Context, arg AddMessageParams) (Message
 		arg.ContentAnswer,
 		arg.ChatID,
 		arg.AuthorID,
+		arg.Role,
 	)
 	var i Message
 	err := row.Scan(
@@ -52,6 +55,7 @@ func (q *Queries) AddMessage(ctx context.Context, arg AddMessageParams) (Message
 		&i.ChatID,
 		&i.AuthorID,
 		&i.Idx,
+		&i.Role,
 	)
 	return i, err
 }
@@ -119,7 +123,7 @@ func (q *Queries) GetChatHistory(ctx context.Context, chatID uuid.UUID) ([]GetCh
 }
 
 const getMessagesByChatID = `-- name: GetMessagesByChatID :many
-SELECT id, created_at, updated_at, deleted_at, content_thoughts, content_answer, chat_id, author_id, idx FROM messages
+SELECT id, created_at, updated_at, deleted_at, content_thoughts, content_answer, chat_id, author_id, idx, role FROM messages
 WHERE chat_id = $1
 ORDER BY idx ASC
 `
@@ -143,6 +147,7 @@ func (q *Queries) GetMessagesByChatID(ctx context.Context, chatID uuid.UUID) ([]
 			&i.ChatID,
 			&i.AuthorID,
 			&i.Idx,
+			&i.Role,
 		); err != nil {
 			return nil, err
 		}

@@ -1,5 +1,5 @@
 -- name: AddMessage :one
-INSERT INTO messages(id, created_at, updated_at, content_thoughts, content_answer, chat_id, author_id, idx)
+INSERT INTO messages(id, created_at, updated_at, content_thoughts, content_answer, chat_id, author_id, role, idx)
 VALUES (
     gen_random_uuid(),
     NOW(),
@@ -8,6 +8,7 @@ VALUES (
     $2,
     $3,
     $4,
+    $5,
     (SELECT COALESCE(MAX(idx), 0) + 1 FROM messages WHERE chat_id = $3)
 )
 RETURNING *;
