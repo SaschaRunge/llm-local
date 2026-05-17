@@ -6,6 +6,11 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/database"
 )
 
+type SceneResult struct {
+	Response  string
+	NextScene Scene
+}
+
 type Runtime interface {
 	Context() context.Context
 	DB() *database.Queries
@@ -13,5 +18,5 @@ type Runtime interface {
 }
 
 type Scene interface {
-	Execute(cmd string) (Scene, error)
+	Execute(cmd string) (SceneResult, error)
 }

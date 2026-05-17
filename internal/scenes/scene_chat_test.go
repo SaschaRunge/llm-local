@@ -19,8 +19,8 @@ import (
 type mockScene struct {
 }
 
-func (s *mockScene) Execute(string) (core.Scene, error) {
-	return nil, nil
+func (s *mockScene) Execute(string) (core.SceneResult, error) {
+	return core.SceneResult{}, nil
 }
 
 type mockRuntime struct {
@@ -64,11 +64,9 @@ func TestSceneChat(t *testing.T) {
 		t.Fatalf("setup: failed fetch chats: %v", err)
 	}
 
-	sceneChat, err := NewSceneChat(runtime, chats[0])
-
-	authors, err := dbQueries.GetCharactersInChat(runtime.Context(), sceneChat.ID)
+	authors, err := dbQueries.GetCharactersInChat(runtime.Context(), chats[0].ID)
 	if err != nil {
-		t.Fatalf("setup: failed fetch characters from chat %q: %v", sceneChat.Name, err)
+		t.Fatalf("setup: failed fetch characters from chat %q: %v", chats[0].Name, err)
 	}
 
 	messagesByAuthor := map[uuid.UUID][]string{
@@ -93,17 +91,17 @@ func TestSceneChat(t *testing.T) {
 			_, err := dbQueries.AddMessage(runtime.Context(), database.AddMessageParams{
 				ContentAnswer: msgByAuthor[i],
 				AuthorID:      authorID,
-				ChatID:        sceneChat.ID,
+				ChatID:        chats[0].ID,
 			})
 			if err != nil {
-				t.Fatalf("failed to add message %q to chat %q with err %v", msgByAuthor[i], sceneChat.Name, err)
+				t.Fatalf("failed to add message %q to chat %q with err %v", msgByAuthor[i], chats[0].Name, err)
 			}
 
 			//t.Logf("added message %q\n", msg.ContentAnswer)
 		}
 	}
 
-	err = sceneChat.loadData()
+	sceneChat, err := NewSceneChat(runtime, chats[0])
 	if err != nil {
 		t.Errorf("failed to load data into sceneChat: %v", err)
 	}
@@ -126,10 +124,10 @@ func TestSceneChat(t *testing.T) {
 	for i := range len(runtime.inputs) {
 		sceneTest, err := sceneChat.Execute(runtime.inputs[i])
 		if err != nil {
-			t.Errorf("unexpected error during sceneChat.Run: %v", err)
+			t.Errorf("unexpected error during sceneChat.Execute: %v", err)
 		}
-		if sceneTest == nil {
-			t.Errorf("sceneChat.Run exited without returning a new scene")
+		if sceneTest.NextScene == nil {
+			t.Errorf("sceneChat.Execute exited without returning a new scene")
 		}
 	}
 }

@@ -28,28 +28,33 @@ type character struct {
 	name string
 }
 
-func NewSceneChat(runtime core.Runtime, chat database.Chat) (SceneChat, error) {
+func NewSceneChat(runtime core.Runtime, chat database.Chat) (*SceneChat, error) {
 	sceneChat := SceneChat{
 		runtime: runtime,
 		ID:      chat.ID,
 		Name:    chat.Name}
 	if err := sceneChat.loadData(); err != nil {
-		return SceneChat{}, err
+		return &SceneChat{}, err
 	}
 
-	return sceneChat, nil
+	return &sceneChat, nil
 }
 
 // TODO: get rid of handle
-func (c *SceneChat) Execute(userInput string) (core.Scene, error) {
+func (c *SceneChat) Execute(userInput string) (core.SceneResult, error) {
 	next, err := c.runtime.Handle(userInput)
 	if next != nil || err != nil {
-		return next, err
+		return core.SceneResult{
+			Response:  "",
+			NextScene: next,
+		}, err
 	}
 
 	//TODO: llm logic
 
-	return c, nil
+	return core.SceneResult{
+		Response:  "",
+		NextScene: c}, nil
 }
 
 func (c *SceneChat) loadData() error {

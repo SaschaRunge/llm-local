@@ -20,5 +20,5 @@ func executeCommandChat(ctx commandContext) (core.Scene, error) {
 		return nil, err
 	}
 
-	return &sceneChat, nil
+	return sceneChat, nil
 }
