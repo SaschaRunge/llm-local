@@ -15,6 +15,3 @@ INNER JOIN characters
     ON chat_subscriptions.character_id = characters.id
 WHERE chat_subscriptions.chat_id = $1;
 
--- name: GetCharactersLikeName :many
-SELECT id FROM characters 
-WHERE name LIKE $1;

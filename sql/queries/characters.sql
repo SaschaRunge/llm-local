@@ -9,3 +9,13 @@ VALUES (
     $3
 )
 RETURNING *;
+
+-- name: GetCharactersLikeName :many
+SELECT id FROM characters 
+WHERE name LIKE $1;
+
+-- name: GetPersonasLikeName :many
+SELECT id, name FROM characters 
+WHERE 
+    name LIKE $1 AND
+    is_user = 1;

@@ -1,5 +1,5 @@
 -- name: AddMessage :one
-INSERT INTO messages(id, created_at, updated_at, content_thoughts, content_answer, chat_id, author_id, role, idx)
+INSERT INTO messages(id, created_at, updated_at, reasoning, content, chat_id, author_id, role, idx)
 VALUES (
     gen_random_uuid(),
     NOW(),
@@ -20,8 +20,8 @@ ORDER BY idx ASC;
 
 -- name: GetChatHistory :many
 SELECT messages.id, 
-messages.content_thoughts, 
-messages.content_answer,
+messages.reasoning, 
+messages.content,
 messages.author_id,
 messages.role,
 characters.name AS author_name 
