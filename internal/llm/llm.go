@@ -61,19 +61,19 @@ func (c *Client) load(model string) error {
 	return nil
 }
 
-func (c *Client) GenerateAnswer(messageHistory []communication.Message) (string, error) {
+func (c *Client) GenerateAnswer(ctx context.Context, messageHistory []communication.Message) (string, error) {
 	anyllmMessageHistory, err := translateHistory(messageHistory)
 	if err != nil {
 		return "", nil
 	}
 
-	response, err := c.provider.Completion(context.Background(), anyllm.CompletionParams{
+	response, err := c.provider.Completion(ctx, anyllm.CompletionParams{
 		Model:    c.model,
 		Messages: anyllmMessageHistory,
 	})
 
 	if err != nil || len(response.Choices) == 0 {
-		return "", nil
+		return "", err
 	}
 
 	return response.Choices[0].Message.ContentString(), nil

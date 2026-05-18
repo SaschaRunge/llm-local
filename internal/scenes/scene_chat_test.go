@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/SaschaRunge/llm-local/internal/communication"
 	"github.com/SaschaRunge/llm-local/internal/core"
 	"github.com/SaschaRunge/llm-local/internal/database"
 	"github.com/google/uuid"
@@ -16,6 +17,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
+/*
 type mockScene struct {
 }
 
@@ -25,7 +27,7 @@ func (s *mockScene) Execute(string) (core.SceneResult, error) {
 
 func (c *mockScene) GetName() string {
 	return "mockScene"
-}
+}*/
 
 type mockRuntime struct {
 	db      *database.Queries
@@ -41,7 +43,7 @@ func (r *mockRuntime) DB() *database.Queries {
 }
 func (r *mockRuntime) Handle(input string) (core.Scene, error) {
 	if input == "/exit" {
-		return &mockScene{}, nil
+		return &SceneChat{}, nil
 	}
 	return nil, nil
 }
@@ -87,40 +89,37 @@ func TestSceneChat(t *testing.T) {
 
 	for i := range authors[0].ID {
 		for _, authorID := range orderedAuthors {
-			msgByAuthor := messagesByAuthor[authorID]
-			if i >= len(msgByAuthor) {
+			messageByAuthor := messagesByAuthor[authorID]
+			if i >= len(messageByAuthor) {
 				continue
 			}
 
 			_, err := dbQueries.AddMessage(runtime.Context(), database.AddMessageParams{
-				ContentAnswer: msgByAuthor[i],
-				AuthorID:      authorID,
-				ChatID:        chats[0].ID,
+				Content:  messageByAuthor[i],
+				AuthorID: authorID,
+				ChatID:   chats[0].ID,
+				Role:     string(communication.RoleUser),
 			})
 			if err != nil {
-				t.Fatalf("failed to add message %q to chat %q with err %v", msgByAuthor[i], chats[0].Name, err)
+				t.Fatalf("failed to add message %q to chat %q with err %v", messageByAuthor[i], chats[0].Name, err)
 			}
 
 			//t.Logf("added message %q\n", msg.ContentAnswer)
 		}
 	}
 
-	sceneChat, err := NewSceneChat(runtime, chats[0])
+	sceneChat, err := NewSceneChat(runtime, chats[0]) //, Character{ID: uuid.UUID{}, Name: "CoolName"})
 	if err != nil {
 		t.Errorf("failed to load data into sceneChat: %v", err)
 	}
-
-	/*for _, msg := range sceneChat.messages {
-		t.Logf("messages: %q\n", msg.contentAnswer)
-	}*/
 
 	expected := []string{"Dickerchen1", "Wuerstchen1", "Stubenhocker1", "Dickerchen2", "Wuerstchen2", "Stubenhocker2", "Dickerchen3", "Stubenhocker3", "Dickerchen4"}
 	if len(sceneChat.cachedMessages) != len(expected) {
 		t.Errorf("fetched %d messages, expected %d:", len(sceneChat.cachedMessages), len(expected))
 	}
 	for i, msg := range sceneChat.cachedMessages {
-		if msg.content != expected[i] {
-			t.Errorf("mismatch at message %d. Got %q, expected %q.", i, expected[i], msg.content)
+		if msg.Message.Content != expected[i] {
+			t.Errorf("mismatch at message %d. Got %q, expected %q.", i, expected[i], msg.Message.Content)
 		}
 	}
 

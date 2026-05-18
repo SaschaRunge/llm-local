@@ -13,7 +13,7 @@ import (
 )
 
 const addMessage = `-- name: AddMessage :one
-INSERT INTO messages(id, created_at, updated_at, content_thoughts, content_answer, chat_id, author_id, role, idx)
+INSERT INTO messages(id, created_at, updated_at, reasoning, content, chat_id, author_id, role, idx)
 VALUES (
     gen_random_uuid(),
     NOW(),
@@ -25,21 +25,21 @@ VALUES (
     $5,
     (SELECT COALESCE(MAX(idx), 0) + 1 FROM messages WHERE chat_id = $3)
 )
-RETURNING id, created_at, updated_at, deleted_at, content_thoughts, content_answer, chat_id, author_id, idx, role
+RETURNING id, created_at, updated_at, deleted_at, reasoning, content, chat_id, author_id, idx, role
 `
 
 type AddMessageParams struct {
-	ContentThoughts sql.NullString
-	ContentAnswer   string
-	ChatID          uuid.UUID
-	AuthorID        uuid.UUID
-	Role            string
+	Reasoning sql.NullString
+	Content   string
+	ChatID    uuid.UUID
+	AuthorID  uuid.UUID
+	Role      string
 }
 
 func (q *Queries) AddMessage(ctx context.Context, arg AddMessageParams) (Message, error) {
 	row := q.db.QueryRowContext(ctx, addMessage,
-		arg.ContentThoughts,
-		arg.ContentAnswer,
+		arg.Reasoning,
+		arg.Content,
 		arg.ChatID,
 		arg.AuthorID,
 		arg.Role,
@@ -50,8 +50,8 @@ func (q *Queries) AddMessage(ctx context.Context, arg AddMessageParams) (Message
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
-		&i.ContentThoughts,
-		&i.ContentAnswer,
+		&i.Reasoning,
+		&i.Content,
 		&i.ChatID,
 		&i.AuthorID,
 		&i.Idx,
@@ -71,8 +71,8 @@ func (q *Queries) DeleteMessages(ctx context.Context) error {
 
 const getChatHistory = `-- name: GetChatHistory :many
 SELECT messages.id, 
-messages.content_thoughts, 
-messages.content_answer,
+messages.reasoning, 
+messages.content,
 messages.author_id,
 messages.role,
 characters.name AS author_name 
@@ -84,12 +84,12 @@ ORDER BY idx ASC
 `
 
 type GetChatHistoryRow struct {
-	ID              uuid.UUID
-	ContentThoughts sql.NullString
-	ContentAnswer   string
-	AuthorID        uuid.UUID
-	Role            string
-	AuthorName      string
+	ID         uuid.UUID
+	Reasoning  sql.NullString
+	Content    string
+	AuthorID   uuid.UUID
+	Role       string
+	AuthorName string
 }
 
 func (q *Queries) GetChatHistory(ctx context.Context, chatID uuid.UUID) ([]GetChatHistoryRow, error) {
@@ -103,8 +103,8 @@ func (q *Queries) GetChatHistory(ctx context.Context, chatID uuid.UUID) ([]GetCh
 		var i GetChatHistoryRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.ContentThoughts,
-			&i.ContentAnswer,
+			&i.Reasoning,
+			&i.Content,
 			&i.AuthorID,
 			&i.Role,
 			&i.AuthorName,
@@ -123,7 +123,7 @@ func (q *Queries) GetChatHistory(ctx context.Context, chatID uuid.UUID) ([]GetCh
 }
 
 const getMessagesByChatID = `-- name: GetMessagesByChatID :many
-SELECT id, created_at, updated_at, deleted_at, content_thoughts, content_answer, chat_id, author_id, idx, role FROM messages
+SELECT id, created_at, updated_at, deleted_at, reasoning, content, chat_id, author_id, idx, role FROM messages
 WHERE chat_id = $1
 ORDER BY idx ASC
 `
@@ -142,8 +142,8 @@ func (q *Queries) GetMessagesByChatID(ctx context.Context, chatID uuid.UUID) ([]
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
-			&i.ContentThoughts,
-			&i.ContentAnswer,
+			&i.Reasoning,
+			&i.Content,
 			&i.ChatID,
 			&i.AuthorID,
 			&i.Idx,

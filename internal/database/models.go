@@ -36,14 +36,14 @@ type ChatSubscription struct {
 }
 
 type Message struct {
-	ID              uuid.UUID
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	DeletedAt       sql.NullTime
-	ContentThoughts sql.NullString
-	ContentAnswer   string
-	ChatID          uuid.UUID
-	AuthorID        uuid.UUID
-	Idx             sql.NullInt64
-	Role            string
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt sql.NullTime
+	Reasoning sql.NullString
+	Content   string
+	ChatID    uuid.UUID
+	AuthorID  uuid.UUID
+	Idx       sql.NullInt64
+	Role      string
 }

@@ -134,8 +134,16 @@ func (c *Cli) Run() error {
 		}
 		if nextScene != c.CurrentScene {
 			fmt.Printf("Entering %s:\n", nextScene.GetName())
+			c.CurrentScene = nextScene
+			continue
 		}
-		c.CurrentScene = nextScene
+
+		result, err := c.CurrentScene.Execute(userInput)
+		if err != nil {
+			fmt.Printf("scene returned with error %q", err)
+		}
+
+		fmt.Println(result.Response)
 	}
 }
 
@@ -157,7 +165,7 @@ func getRegistry() map[string]command {
 	return map[string]command{
 		CmdChat: {
 			name:               CmdChat,
-			description:        "Starts the chat interface. If a [chat_name] argument is provided, will load or create the chat.",
+			description:        "Starts the chat interface as [persona]. Will load or create the chat [chat_name]. ",
 			usage:              fmt.Sprintf("%s [chat_name]", CmdChat),
 			callback:           executeCommandChat,
 			minAmountArguments: 1,

@@ -8,6 +8,8 @@ package database
 import (
 	"context"
 	"database/sql"
+
+	"github.com/google/uuid"
 )
 
 const addCharacter = `-- name: AddCharacter :one
@@ -42,4 +44,67 @@ func (q *Queries) AddCharacter(ctx context.Context, arg AddCharacterParams) (Cha
 		&i.IsUser,
 	)
 	return i, err
+}
+
+const getCharactersLikeName = `-- name: GetCharactersLikeName :many
+SELECT id FROM characters 
+WHERE name LIKE $1
+`
+
+func (q *Queries) GetCharactersLikeName(ctx context.Context, name string) ([]uuid.UUID, error) {
+	rows, err := q.db.QueryContext(ctx, getCharactersLikeName, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPersonasLikeName = `-- name: GetPersonasLikeName :many
+SELECT id, name FROM characters 
+WHERE 
+    name LIKE $1 AND
+    is_user = 1
+`
+
+type GetPersonasLikeNameRow struct {
+	ID   uuid.UUID
+	Name string
+}
+
+func (q *Queries) GetPersonasLikeName(ctx context.Context, name string) ([]GetPersonasLikeNameRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPersonasLikeName, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPersonasLikeNameRow
+	for rows.Next() {
+		var i GetPersonasLikeNameRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
