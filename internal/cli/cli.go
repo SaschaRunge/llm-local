@@ -75,8 +75,15 @@ func (c *Cli) DB() *database.Queries {
 }
 
 func (c *Cli) GetInput() string {
-	c.scanner.Scan()
-	return c.scanner.Text()
+	input := ""
+	for {
+		c.scanner.Scan()
+		input = c.scanner.Text()
+		if input != "" {
+			break
+		}
+	}
+	return input
 }
 
 // TODO: probably should split

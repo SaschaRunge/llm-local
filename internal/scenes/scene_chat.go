@@ -21,7 +21,7 @@ const (
 type SceneChat struct {
 	cachedMessages []cachedMessage
 	characters     []Character
-	persona        Character
+	user_character Character
 	ID             uuid.UUID
 	Name           string
 	runtime        core.Runtime
@@ -45,8 +45,8 @@ func NewSceneChat(runtime core.Runtime, chat database.Chat) (*SceneChat, error) 
 	}
 
 	//TODO: hardcode persona for now
-	sceneChat.persona.ID, _ = uuid.Parse("993112df-6dfb-4903-af7c-08448fd4f436")
-	sceneChat.persona.Name = "Sascha"
+	sceneChat.user_character.ID, _ = uuid.Parse("993112df-6dfb-4903-af7c-08448fd4f436")
+	sceneChat.user_character.Name = "Sascha"
 
 	if err := sceneChat.loadData(); err != nil {
 		return &SceneChat{}, err
@@ -69,7 +69,7 @@ func (c *SceneChat) Execute(userInput string) (core.SceneResult, error) {
 	history := append([]cachedMessage{}, c.cachedMessages...)
 	prompt := cachedMessage{
 		Message: communication.Message{
-			Name:      c.persona.Name,
+			Name:      c.user_character.Name,
 			Role:      communication.RoleUser,
 			Reasoning: "",
 			Content:   userInput,
@@ -102,7 +102,7 @@ func (c *SceneChat) Execute(userInput string) (core.SceneResult, error) {
 		Reasoning: sql.NullString{},
 		Content:   prompt.Content,
 		ChatID:    c.ID,
-		AuthorID:  c.persona.ID,
+		AuthorID:  c.user_character.ID,
 		Role:      string(prompt.Role),
 	})
 	if err != nil {
