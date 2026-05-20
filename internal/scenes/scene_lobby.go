@@ -5,10 +5,10 @@ import "github.com/SaschaRunge/llm-local/internal/core"
 type SceneLobby struct {
 }
 
-func (c *SceneLobby) Execute(userInput string) (core.SceneResult, error) {
-	return core.SceneResult{
+func (c *SceneLobby) Execute(userInput string) (core.CommandResult, error) {
+	return core.CommandResult{
 		NextScene: c,
-		Response:  "",
+		Output:    "",
 	}, nil
 }
 

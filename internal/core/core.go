@@ -6,18 +6,29 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/database"
 )
 
-type SceneResult struct {
-	Response  string
+type CommandResult struct {
+	Output    string
 	NextScene Scene
+}
+
+type CommandContext struct {
+	Cmd     string
+	Args    []string
+	Runtime Runtime
 }
 
 type Runtime interface {
 	Context() context.Context
+	CurrentScene() Scene
 	DB() *database.Queries
-	Handle(input string) (Scene, error)
 }
 
 type Scene interface {
 	GetName() string
-	Execute(cmd string) (SceneResult, error)
+	Execute(rawInput string) (CommandResult, error)
+}
+
+type Command interface {
+	CanExecute(commandCtx CommandContext) bool
+	Execute(commandCtx CommandContext) (CommandResult, error)
 }

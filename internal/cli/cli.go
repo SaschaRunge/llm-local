@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/SaschaRunge/llm-local/internal/cli/commands"
 	"github.com/SaschaRunge/llm-local/internal/core"
 	"github.com/SaschaRunge/llm-local/internal/database"
 	"github.com/SaschaRunge/llm-local/internal/scenes"
@@ -21,34 +22,23 @@ const (
 	CmdLobby       = "/lobby"
 )
 
-const (
-	Greeting = "Welcome to llm-local."
-	Goodbye  = "Closing... . Goodbye."
-)
-
 type Cli struct {
-	CommandRegistry map[string]command
+	CommandRegistry map[string]commandInfo
 	CommandAlias    CommandAlias
-	CurrentScene    core.Scene
-	DBQueries       *database.Queries
+	currentScene    core.Scene
+	dbQueries       *database.Queries
 	context         context.Context
 	scanner         *bufio.Scanner
 }
 
-type command struct {
+type commandInfo struct {
 	name               string
 	description        string
 	usage              string
-	callback           func(commandContext) (core.Scene, error)
+	command            core.Command
 	requiredScene      core.Scene
 	minAmountArguments int
 	maxAmountArguments int
-}
-
-type commandContext struct {
-	command command
-	args    []string
-	cli     *Cli
 }
 
 type CommandAlias struct {
@@ -58,10 +48,10 @@ type CommandAlias struct {
 func New(dbQueries *database.Queries) *Cli {
 	return &Cli{
 		CommandRegistry: getRegistry(),
-		DBQueries:       dbQueries,
+		dbQueries:       dbQueries,
 		scanner:         bufio.NewScanner(os.Stdin),
 		context:         context.Background(),
-		CurrentScene:    &scenes.SceneLobby{},
+		currentScene:    &scenes.SceneLobby{},
 	}
 }
 
@@ -70,8 +60,12 @@ func (c *Cli) Context() context.Context {
 	return c.context
 }
 
+func (c *Cli) CurrentScene() core.Scene {
+	return c.currentScene
+}
+
 func (c *Cli) DB() *database.Queries {
-	return c.DBQueries
+	return c.dbQueries
 }
 
 func (c *Cli) GetInput() string {
@@ -86,81 +80,84 @@ func (c *Cli) GetInput() string {
 	return input
 }
 
-// TODO: probably should split
-func (c *Cli) Handle(input string) (core.Scene, error) {
-	if !strings.HasPrefix(input, "/") {
-		switch c.CurrentScene.(type) {
-		case *scenes.SceneChat:
-			return c.CurrentScene, nil
-		default:
-			return nil, fmt.Errorf("unknown command %q: %w", input, core.ErrNotACommand)
+func (c *Cli) Execute(cmdName string, args []string) (core.CommandResult, error) {
+	cmdInfo, exists := c.CommandRegistry[cmdName]
+	if !strings.HasPrefix(cmdName, "/") && !strings.HasPrefix(cmdName, "@") {
+		cmdExecChat := &scenes.CommandExecuteChat{}
+
+		if cmdExecChat.CanExecute(core.CommandContext{
+			Cmd:     cmdName,
+			Args:    args,
+			Runtime: c,
+		}) {
+			return cmdExecChat.Execute(core.CommandContext{
+				Cmd:     cmdName,
+				Args:    args,
+				Runtime: c,
+			})
 		}
 	}
 
-	cmd, args := parse(input)
-
-	return c.Execute(cmd, args)
-}
-
-func (c *Cli) Execute(cmdName string, args []string) (core.Scene, error) {
-	cmd, exists := c.CommandRegistry[cmdName]
 	if !exists {
-		return nil, fmt.Errorf("unknown command %q: %w", cmdName, core.ErrNotACommand)
+		return core.CommandResult{}, fmt.Errorf("unknown command %q: %w", cmdName, core.ErrNotACommand)
 	}
 
-	if len(args) < cmd.minAmountArguments {
-		return nil, core.ErrInvalidCommand{Context: fmt.Sprintf("not enough arguments in %q command. usage: %q", cmd.name, cmd.usage)}
+	if len(args) < cmdInfo.minAmountArguments {
+		return core.CommandResult{}, core.ErrInvalidCommand{Context: fmt.Sprintf("not enough arguments in %q command. usage: %q", cmdInfo.name, cmdInfo.usage)}
 	}
-	if len(args) > cmd.maxAmountArguments {
-		return nil, core.ErrInvalidCommand{Context: fmt.Sprintf("to many arguments in %q command. usage: %q", cmd.name, cmd.usage)}
-	}
-
-	if cmd.requiredScene != nil && cmd.requiredScene != c.CurrentScene {
-		return nil, core.ErrInvalidCommand{Context: fmt.Sprintf("command %q not available in current context.", cmd.name)}
+	if len(args) > cmdInfo.maxAmountArguments {
+		return core.CommandResult{}, core.ErrInvalidCommand{Context: fmt.Sprintf("to many arguments in %q command. usage: %q", cmdInfo.name, cmdInfo.usage)}
 	}
 
-	ctx := commandContext{
-		command: cmd,
-		args:    args,
-		cli:     c,
+	cmdCtx := core.CommandContext{
+		Args:    args,
+		Runtime: c,
 	}
-	return cmd.callback(ctx)
+
+	if !cmdInfo.command.CanExecute(cmdCtx) {
+		return core.CommandResult{}, core.ErrInvalidCommand{Context: fmt.Sprintf("command %q not available in current context.", cmdInfo.name)}
+	}
+
+	return cmdInfo.command.Execute(cmdCtx)
 }
 
 func (c *Cli) Run() error {
-	fmt.Println("=== " + Greeting + " ===")
-	fmt.Printf("Entering %s:\n", c.CurrentScene.GetName())
+	fmt.Println("=== " + core.Greeting + " ===")
+	fmt.Printf("Entering %s:\n", c.CurrentScene().GetName())
 
 	for {
-		userInput := c.GetInput()
-		nextScene, err := c.Handle(userInput)
+		rawInput := c.GetInput()
+		//if isCommand(rawInput) {
+		cmd, args := parse(rawInput)
+		result, err := c.Execute(cmd, args)
 		if err != nil {
 			// TODO: implement error handling/output via cleanOutput
 			fmt.Println(err)
 			continue
 		}
-		if nextScene != c.CurrentScene {
-			fmt.Printf("Entering %s:\n", nextScene.GetName())
-			c.CurrentScene = nextScene
+		if result.NextScene != c.CurrentScene() {
+			fmt.Printf("Entering %s:\n", result.NextScene.GetName())
+			c.currentScene = result.NextScene
 			continue
 		}
 
-		result, err := c.CurrentScene.Execute(userInput)
-		if err != nil {
-			fmt.Printf("scene returned with error %q", err)
-		}
-
-		fmt.Println(result.Response)
+		//}
+		/*
+			result, err := c.CurrentScene().Execute(rawInput)
+			if err != nil {
+				fmt.Printf("scene returned with error %q", err)
+			}
+		*/
+		fmt.Println(result.Output)
 	}
 }
 
-// TODO: add logic (do i even need?)
-func TranslateError(err error) string {
-	return err.Error()
+func isCommand(rawInput string) bool {
+	return strings.HasPrefix(rawInput, "/") || strings.HasPrefix(rawInput, "@")
 }
 
-func parse(input string) (cmd string, args []string) {
-	parts := strings.Split(input, " ")
+func parse(rawInput string) (cmd string, args []string) {
+	parts := strings.Split(rawInput, " ")
 	cmd = parts[0]
 	args = []string{}
 	args = append(args, parts[1:]...)
@@ -168,13 +165,17 @@ func parse(input string) (cmd string, args []string) {
 	return cmd, args
 }
 
-func getRegistry() map[string]command {
-	return map[string]command{
+func translateError(err error) string {
+	return err.Error()
+}
+
+func getRegistry() map[string]commandInfo {
+	return map[string]commandInfo{
 		CmdChat: {
 			name:               CmdChat,
 			description:        "Starts the chat interface as [persona]. Will load or create the chat [chat_name]. ",
 			usage:              fmt.Sprintf("%s [chat_name]", CmdChat),
-			callback:           executeCommandChat,
+			command:            &commands.CommandChat{},
 			minAmountArguments: 1,
 			maxAmountArguments: 1,
 		},
@@ -182,7 +183,7 @@ func getRegistry() map[string]command {
 			name:               CmdChats,
 			description:        "Shows the available chats for the current user.",
 			usage:              fmt.Sprintf("%s", CmdChats),
-			callback:           executeCommandChats,
+			command:            &commands.CommandChats{},
 			minAmountArguments: 0,
 			maxAmountArguments: 0,
 		},
@@ -190,7 +191,7 @@ func getRegistry() map[string]command {
 			name:               CmdDebugDelete,
 			description:        "Deletes the current chat's history.",
 			usage:              fmt.Sprintf("%s", CmdChat),
-			callback:           executeCommandDebugDelete,
+			command:            &commands.CommandDebugDelete{},
 			minAmountArguments: 0,
 			maxAmountArguments: 0,
 		},
@@ -198,7 +199,7 @@ func getRegistry() map[string]command {
 			name:               CmdExit,
 			description:        "Exits the program.",
 			usage:              fmt.Sprintf("%s", CmdExit),
-			callback:           executeCommandExit,
+			command:            &commands.CommandExit{},
 			minAmountArguments: 0,
 			maxAmountArguments: 0,
 		},
@@ -206,7 +207,7 @@ func getRegistry() map[string]command {
 			name:               CmdLobby,
 			description:        "Enters the lobby.",
 			usage:              fmt.Sprintf("%s", CmdLobby),
-			callback:           executeCommandLobby,
+			command:            &commands.CommandLobby{},
 			minAmountArguments: 0,
 			maxAmountArguments: 0,
 		},

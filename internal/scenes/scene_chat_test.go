@@ -38,6 +38,11 @@ type mockRuntime struct {
 func (r *mockRuntime) Context() context.Context {
 	return context.Background()
 }
+
+func (r *mockRuntime) CurrentScene() core.Scene {
+	return &SceneChat{}
+}
+
 func (r *mockRuntime) DB() *database.Queries {
 	return r.db
 }

@@ -38,6 +38,17 @@ type cachedMessage struct {
 
 type Character = database.GetCharactersInChatRow
 
+type CommandExecuteChat struct{}
+
+func (c *CommandExecuteChat) CanExecute(commandCtx core.CommandContext) bool {
+	_, ok := commandCtx.Runtime.CurrentScene().(*SceneChat)
+	return ok
+}
+
+func (c *CommandExecuteChat) Execute(commandCtx core.CommandContext) (core.CommandResult, error) {
+	return commandCtx.Runtime.CurrentScene().Execute(commandCtx.Cmd)
+}
+
 func NewSceneChat(runtime core.Runtime, chat database.Chat) (*SceneChat, error) {
 	sceneChat := SceneChat{
 		runtime: runtime,
@@ -46,7 +57,7 @@ func NewSceneChat(runtime core.Runtime, chat database.Chat) (*SceneChat, error) 
 	}
 
 	if err := sceneChat.loadData(); err != nil {
-		return &SceneChat{}, err
+		return nil, err
 	}
 
 	//TODO: do not hardcode model type/*
@@ -62,7 +73,7 @@ func NewSceneChat(runtime core.Runtime, chat database.Chat) (*SceneChat, error) 
 
 // TODO: need to add id/authorID to cached Messages after commiting to DB
 // instead append to history at the end
-func (c *SceneChat) Execute(userInput string) (core.SceneResult, error) {
+func (c *SceneChat) Execute(userInput string) (core.CommandResult, error) {
 	history := append([]cachedMessage{}, c.cachedMessages...)
 	prompt := cachedMessage{
 		Message: communication.Message{
@@ -79,8 +90,8 @@ func (c *SceneChat) Execute(userInput string) (core.SceneResult, error) {
 	defer cancel()
 	response, err := c.llmClient.GenerateAnswer(ctx, asComMessages(history))
 	if err != nil {
-		return core.SceneResult{
-			Response:  "",
+		return core.CommandResult{
+			Output:    "",
 			NextScene: c,
 		}, err
 	}
@@ -103,8 +114,8 @@ func (c *SceneChat) Execute(userInput string) (core.SceneResult, error) {
 		Role:      string(prompt.Role),
 	})
 	if err != nil {
-		return core.SceneResult{
-			Response:  "",
+		return core.CommandResult{
+			Output:    "",
 			NextScene: c,
 		}, err
 	}
@@ -118,8 +129,8 @@ func (c *SceneChat) Execute(userInput string) (core.SceneResult, error) {
 		Role:      string(answer.Role),
 	})
 	if err != nil {
-		return core.SceneResult{
-			Response:  "",
+		return core.CommandResult{
+			Output:    "",
 			NextScene: c,
 		}, err
 	}
@@ -131,8 +142,8 @@ func (c *SceneChat) Execute(userInput string) (core.SceneResult, error) {
 
 	c.cachedMessages = append(c.cachedMessages, prompt, answer)
 
-	return core.SceneResult{
-		Response:  response,
+	return core.CommandResult{
+		Output:    response,
 		NextScene: c,
 	}, nil
 }
