@@ -19,14 +19,17 @@ type Character struct {
 	Name         string
 	SystemPrompt sql.NullString
 	IsUser       sql.NullBool
+	IsSystem     sql.NullBool
 }
 
 type Chat struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt sql.NullTime
-	Name      string
+	ID              uuid.UUID
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	DeletedAt       sql.NullTime
+	Name            string
+	UserCharacterID uuid.NullUUID
+	Scenario        sql.NullString
 }
 
 type ChatSubscription struct {

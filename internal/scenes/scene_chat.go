@@ -15,17 +15,19 @@ import (
 )
 
 const (
-	generateAnswerTimeoutInSeconds = 30
+	generateAnswerTimeoutInSeconds = 120
 )
 
 type SceneChat struct {
 	cachedMessages []cachedMessage
 	characters     []Character
-	user_character Character
+	userCharacter  Character
 	ID             uuid.UUID
 	Name           string
-	runtime        core.Runtime
-	llmClient      *llm.Client
+	scenario       string
+
+	runtime   core.Runtime
+	llmClient *llm.Client
 }
 
 type cachedMessage struct {
@@ -41,12 +43,7 @@ func NewSceneChat(runtime core.Runtime, chat database.Chat) (*SceneChat, error) 
 		runtime: runtime,
 		ID:      chat.ID,
 		Name:    chat.Name,
-		//persona: persona,
 	}
-
-	//TODO: hardcode persona for now
-	sceneChat.user_character.ID, _ = uuid.Parse("993112df-6dfb-4903-af7c-08448fd4f436")
-	sceneChat.user_character.Name = "Sascha"
 
 	if err := sceneChat.loadData(); err != nil {
 		return &SceneChat{}, err
@@ -69,7 +66,7 @@ func (c *SceneChat) Execute(userInput string) (core.SceneResult, error) {
 	history := append([]cachedMessage{}, c.cachedMessages...)
 	prompt := cachedMessage{
 		Message: communication.Message{
-			Name:      c.user_character.Name,
+			Name:      c.userCharacter.Name,
 			Role:      communication.RoleUser,
 			Reasoning: "",
 			Content:   userInput,
@@ -102,7 +99,7 @@ func (c *SceneChat) Execute(userInput string) (core.SceneResult, error) {
 		Reasoning: sql.NullString{},
 		Content:   prompt.Content,
 		ChatID:    c.ID,
-		AuthorID:  c.user_character.ID,
+		AuthorID:  c.userCharacter.ID,
 		Role:      string(prompt.Role),
 	})
 	if err != nil {
@@ -146,16 +143,29 @@ func (c *SceneChat) GetName() string {
 
 func (c *SceneChat) loadData() error {
 	db := c.runtime.DB()
+	ctx := c.runtime.Context()
 
-	messages, err := db.GetChatHistory(c.runtime.Context(), c.ID)
+	messages, err := db.GetChatHistory(ctx, c.ID)
 	if err != nil {
 		return err
 	}
 
-	c.characters, err = db.GetCharactersInChat(c.runtime.Context(), c.ID)
+	c.characters, err = db.GetCharactersInChat(ctx, c.ID)
 	if err != nil {
 		return err
 	}
+
+	userCharacter, err := db.GetUserCharacterInChatByID(ctx, c.ID)
+	if err != nil {
+		return err
+	}
+	c.userCharacter = mapFromDBUserCharacter(userCharacter)
+
+	scenario, err := db.GetScenarioFromChatByID(ctx, c.ID)
+	if err != nil {
+		return err
+	}
+	c.scenario = scenario.String
 
 	for _, message := range messages {
 		role := communication.Role(message.Role)
@@ -184,6 +194,14 @@ func asComMessages(messages []cachedMessage) []communication.Message {
 		comMessages = append(comMessages, message.Message)
 	}
 	return comMessages
+}
+
+func mapFromDBUserCharacter(userCharacter database.GetUserCharacterInChatByIDRow) Character {
+	return Character{
+		ID:           userCharacter.ID,
+		Name:         userCharacter.Name,
+		SystemPrompt: userCharacter.SystemPrompt,
+	}
 }
 
 func (c *SceneChat) writeToHistory() error {

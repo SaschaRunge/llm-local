@@ -18,3 +18,15 @@ WHERE name LIKE $1;
 
 -- name: GetAllChats :many
 SELECT * FROM chats;
+
+-- name: GetUserCharacterInChatByID :one
+SELECT id, name, system_prompt FROM characters
+WHERE characters.id = (
+    SELECT user_character_id 
+    FROM chats
+    WHERE chats.id = $1
+);
+
+-- name: GetScenarioFromChatByID :one
+SELECT scenario FROM chats
+WHERE chats.id = $1;

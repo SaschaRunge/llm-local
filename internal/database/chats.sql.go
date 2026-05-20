@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -19,7 +20,7 @@ VALUES(
     NOW(),
     $1
 )
-RETURNING id, created_at, updated_at, deleted_at, name
+RETURNING id, created_at, updated_at, deleted_at, name, user_character_id, scenario
 `
 
 func (q *Queries) AddChat(ctx context.Context, name string) (Chat, error) {
@@ -31,12 +32,14 @@ func (q *Queries) AddChat(ctx context.Context, name string) (Chat, error) {
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.Name,
+		&i.UserCharacterID,
+		&i.Scenario,
 	)
 	return i, err
 }
 
 const getAllChats = `-- name: GetAllChats :many
-SELECT id, created_at, updated_at, deleted_at, name FROM chats
+SELECT id, created_at, updated_at, deleted_at, name, user_character_id, scenario FROM chats
 `
 
 func (q *Queries) GetAllChats(ctx context.Context) ([]Chat, error) {
@@ -54,6 +57,8 @@ func (q *Queries) GetAllChats(ctx context.Context) ([]Chat, error) {
 			&i.UpdatedAt,
 			&i.DeletedAt,
 			&i.Name,
+			&i.UserCharacterID,
+			&i.Scenario,
 		); err != nil {
 			return nil, err
 		}
@@ -69,7 +74,7 @@ func (q *Queries) GetAllChats(ctx context.Context) ([]Chat, error) {
 }
 
 const getChatByID = `-- name: GetChatByID :one
-SELECT id, created_at, updated_at, deleted_at, name FROM chats
+SELECT id, created_at, updated_at, deleted_at, name, user_character_id, scenario FROM chats
 WHERE id = $1
 `
 
@@ -82,12 +87,14 @@ func (q *Queries) GetChatByID(ctx context.Context, id uuid.UUID) (Chat, error) {
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.Name,
+		&i.UserCharacterID,
+		&i.Scenario,
 	)
 	return i, err
 }
 
 const getChatsLikeName = `-- name: GetChatsLikeName :many
-SELECT id, created_at, updated_at, deleted_at, name FROM chats
+SELECT id, created_at, updated_at, deleted_at, name, user_character_id, scenario FROM chats
 WHERE name LIKE $1
 `
 
@@ -106,6 +113,8 @@ func (q *Queries) GetChatsLikeName(ctx context.Context, name string) ([]Chat, er
 			&i.UpdatedAt,
 			&i.DeletedAt,
 			&i.Name,
+			&i.UserCharacterID,
+			&i.Scenario,
 		); err != nil {
 			return nil, err
 		}
@@ -118,4 +127,38 @@ func (q *Queries) GetChatsLikeName(ctx context.Context, name string) ([]Chat, er
 		return nil, err
 	}
 	return items, nil
+}
+
+const getScenarioFromChatByID = `-- name: GetScenarioFromChatByID :one
+SELECT scenario FROM chats
+WHERE chats.id = $1
+`
+
+func (q *Queries) GetScenarioFromChatByID(ctx context.Context, id uuid.UUID) (sql.NullString, error) {
+	row := q.db.QueryRowContext(ctx, getScenarioFromChatByID, id)
+	var scenario sql.NullString
+	err := row.Scan(&scenario)
+	return scenario, err
+}
+
+const getUserCharacterInChatByID = `-- name: GetUserCharacterInChatByID :one
+SELECT id, name, system_prompt FROM characters
+WHERE characters.id = (
+    SELECT user_character_id 
+    FROM chats
+    WHERE chats.id = $1
+)
+`
+
+type GetUserCharacterInChatByIDRow struct {
+	ID           uuid.UUID
+	Name         string
+	SystemPrompt sql.NullString
+}
+
+func (q *Queries) GetUserCharacterInChatByID(ctx context.Context, id uuid.UUID) (GetUserCharacterInChatByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserCharacterInChatByID, id)
+	var i GetUserCharacterInChatByIDRow
+	err := row.Scan(&i.ID, &i.Name, &i.SystemPrompt)
+	return i, err
 }

@@ -9,7 +9,8 @@ VALUES(
 -- name: GetCharactersInChat :many
 SELECT 
 characters.id, 
-characters.name
+characters.name,
+characters.system_prompt
 FROM chat_subscriptions 
 INNER JOIN characters
     ON chat_subscriptions.character_id = characters.id

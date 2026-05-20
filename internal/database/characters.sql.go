@@ -22,7 +22,7 @@ VALUES (
     $2,
     $3
 )
-RETURNING id, created_at, updated_at, deleted_at, name, system_prompt, is_user
+RETURNING id, created_at, updated_at, deleted_at, name, system_prompt, is_user, is_system
 `
 
 type AddCharacterParams struct {
@@ -42,6 +42,7 @@ func (q *Queries) AddCharacter(ctx context.Context, arg AddCharacterParams) (Cha
 		&i.Name,
 		&i.SystemPrompt,
 		&i.IsUser,
+		&i.IsSystem,
 	)
 	return i, err
 }
@@ -74,28 +75,29 @@ func (q *Queries) GetCharactersLikeName(ctx context.Context, name string) ([]uui
 	return items, nil
 }
 
-const getPersonasLikeName = `-- name: GetPersonasLikeName :many
-SELECT id, name FROM characters 
+const getUserCharactersLikeName = `-- name: GetUserCharactersLikeName :many
+SELECT id, name, system_prompt FROM characters 
 WHERE 
     name LIKE $1 AND
     is_user = 1
 `
 
-type GetPersonasLikeNameRow struct {
-	ID   uuid.UUID
-	Name string
+type GetUserCharactersLikeNameRow struct {
+	ID           uuid.UUID
+	Name         string
+	SystemPrompt sql.NullString
 }
 
-func (q *Queries) GetPersonasLikeName(ctx context.Context, name string) ([]GetPersonasLikeNameRow, error) {
-	rows, err := q.db.QueryContext(ctx, getPersonasLikeName, name)
+func (q *Queries) GetUserCharactersLikeName(ctx context.Context, name string) ([]GetUserCharactersLikeNameRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUserCharactersLikeName, name)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetPersonasLikeNameRow
+	var items []GetUserCharactersLikeNameRow
 	for rows.Next() {
-		var i GetPersonasLikeNameRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		var i GetUserCharactersLikeNameRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.SystemPrompt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

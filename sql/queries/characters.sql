@@ -14,8 +14,8 @@ RETURNING *;
 SELECT id FROM characters 
 WHERE name LIKE $1;
 
--- name: GetPersonasLikeName :many
-SELECT id, name FROM characters 
+-- name: GetUserCharactersLikeName :many
+SELECT id, name, system_prompt FROM characters 
 WHERE 
     name LIKE $1 AND
     is_user = 1;
