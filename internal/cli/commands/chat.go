@@ -7,26 +7,21 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/scenes"
 )
 
-type CommandChat struct{}
+type Chat struct{}
 
-//should return error and replace in cli
-/*
-	if !exists {
-		return core.CommandResult{}, fmt.Errorf("unknown command %q: %w", cmdName, core.ErrNotACommand)
-	}
+func (c *Chat) Name() string { return "/chat" }
+func (c *Chat) Description() string {
+	return "Starts the chat interface. Will load or create the chat [chat_name]."
+}
+func (c *Chat) Usage() string           { return fmt.Sprintf("%s [chat_name]", c.Name()) }
+func (c *Chat) MinAmountArguments() int { return 1 }
+func (c *Chat) MaxAmountArguments() int { return 1 }
 
-	if len(args) < cmdInfo.minAmountArguments {
-		return core.CommandResult{}, core.ErrInvalidCommand{Context: fmt.Sprintf("not enough arguments in %q command. usage: %q", cmdInfo.name, cmdInfo.usage)}
-	}
-	if len(args) > cmdInfo.maxAmountArguments {
-		return core.CommandResult{}, core.ErrInvalidCommand{Context: fmt.Sprintf("to many arguments in %q command. usage: %q", cmdInfo.name, cmdInfo.usage)}
-	}
-*/
-func (c *CommandChat) CanExecute(commandCtx core.CommandContext) bool {
+func (c *Chat) CanExecute(commandCtx core.CommandContext) bool {
 	return true
 }
 
-func (c *CommandChat) Execute(commandCtx core.CommandContext) (core.CommandResult, error) {
+func (c *Chat) Execute(commandCtx core.CommandContext) (core.CommandResult, error) {
 	chats, err := commandCtx.Runtime.DB().GetChatsLikeName(commandCtx.Runtime.Context(), commandCtx.Args[0])
 	if err != nil {
 		return core.CommandResult{}, err

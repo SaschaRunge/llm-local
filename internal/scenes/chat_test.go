@@ -40,7 +40,7 @@ func (r *mockRuntime) Context() context.Context {
 }
 
 func (r *mockRuntime) CurrentScene() core.Scene {
-	return &SceneChat{}
+	return &Chat{}
 }
 
 func (r *mockRuntime) DB() *database.Queries {
@@ -48,7 +48,7 @@ func (r *mockRuntime) DB() *database.Queries {
 }
 func (r *mockRuntime) Handle(input string) (core.Scene, error) {
 	if input == "/exit" {
-		return &SceneChat{}, nil
+		return &Chat{}, nil
 	}
 	return nil, nil
 }

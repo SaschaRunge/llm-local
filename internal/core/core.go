@@ -29,6 +29,12 @@ type Scene interface {
 }
 
 type Command interface {
+	Name() string
+	Description() string
+	Usage() string
+	MinAmountArguments() int
+	MaxAmountArguments() int
+
 	CanExecute(commandCtx CommandContext) bool
 	Execute(commandCtx CommandContext) (CommandResult, error)
 }

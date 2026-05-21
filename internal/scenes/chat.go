@@ -18,7 +18,7 @@ const (
 	generateAnswerTimeoutInSeconds = 120
 )
 
-type SceneChat struct {
+type Chat struct {
 	cachedMessages []cachedMessage
 	characters     []Character
 	userCharacter  Character
@@ -38,10 +38,11 @@ type cachedMessage struct {
 
 type Character = database.GetCharactersInChatRow
 
+// TODO: move to fallback
 type CommandExecuteChat struct{}
 
 func (c *CommandExecuteChat) CanExecute(commandCtx core.CommandContext) bool {
-	_, ok := commandCtx.Runtime.CurrentScene().(*SceneChat)
+	_, ok := commandCtx.Runtime.CurrentScene().(*Chat)
 	return ok
 }
 
@@ -49,8 +50,8 @@ func (c *CommandExecuteChat) Execute(commandCtx core.CommandContext) (core.Comma
 	return commandCtx.Runtime.CurrentScene().Execute(commandCtx.Cmd)
 }
 
-func NewSceneChat(runtime core.Runtime, chat database.Chat) (*SceneChat, error) {
-	sceneChat := SceneChat{
+func NewSceneChat(runtime core.Runtime, chat database.Chat) (*Chat, error) {
+	sceneChat := Chat{
 		runtime: runtime,
 		ID:      chat.ID,
 		Name:    chat.Name,
@@ -65,7 +66,7 @@ func NewSceneChat(runtime core.Runtime, chat database.Chat) (*SceneChat, error) 
 	sceneChat.llmClient = llmClient
 
 	if err != nil {
-		return &SceneChat{}, err
+		return &Chat{}, err
 	}
 
 	return &sceneChat, nil
@@ -73,7 +74,7 @@ func NewSceneChat(runtime core.Runtime, chat database.Chat) (*SceneChat, error) 
 
 // TODO: need to add id/authorID to cached Messages after commiting to DB
 // instead append to history at the end
-func (c *SceneChat) Execute(userInput string) (core.CommandResult, error) {
+func (c *Chat) Execute(userInput string) (core.CommandResult, error) {
 	history := append([]cachedMessage{}, c.cachedMessages...)
 	prompt := cachedMessage{
 		Message: communication.Message{
@@ -148,11 +149,15 @@ func (c *SceneChat) Execute(userInput string) (core.CommandResult, error) {
 	}, nil
 }
 
-func (c *SceneChat) GetName() string {
+func (c *Chat) GetName() string {
 	return "Chat"
 }
 
-func (c *SceneChat) loadData() error {
+func (c *Chat) Regenerate() core.CommandResult {
+	return core.CommandResult{Output: "Totally regenerated!", NextScene: c}
+}
+
+func (c *Chat) loadData() error {
 	db := c.runtime.DB()
 	ctx := c.runtime.Context()
 
@@ -215,6 +220,6 @@ func mapFromDBUserCharacter(userCharacter database.GetUserCharacterInChatByIDRow
 	}
 }
 
-func (c *SceneChat) writeToHistory() error {
+func (c *Chat) writeToHistory() error {
 	return nil
 }
