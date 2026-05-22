@@ -72,35 +72,33 @@ func (c *Cli) GetInput() string {
 	return input
 }
 
-func (c *Cli) Execute(cmdName string, args []string) (core.CommandResult, error) {
-	cmd, exists := c.CommandRegistry[cmdName]
+func GetPrefixFrom(rawInput string) string {
+	validPrefixes := []string{
+		"/",
+		"@",
+	}
 
-	if !strings.HasPrefix(cmdName, "/") && !strings.HasPrefix(cmdName, "@") {
-		//TODO: implement fallback via registry
-		cmdExecChat := &scenes.CommandExecuteChat{}
-
-		if cmdExecChat.CanExecute(core.CommandContext{
-			//Cmd:     cmdName + strings.Join(args, " "),
-			//Args:    args,
-			Runtime: c,
-		}) {
-			return cmdExecChat.Execute(core.CommandContext{
-				Cmd: cmdName + " " + strings.Join(args, " "),
-				//Args:    args,
-				Runtime: c,
-			})
+	for _, prefix := range validPrefixes {
+		if strings.HasPrefix(rawInput, prefix) {
+			return prefix
 		}
 	}
 
+	return ""
+}
+
+func (c *Cli) Execute(cmdName string, args []string) (core.Result, error) {
+	cmd, exists := c.CommandRegistry[cmdName]
+
 	if !exists {
-		return core.CommandResult{}, fmt.Errorf("unknown command %q: %w", cmdName, core.ErrNotACommand)
+		return core.Result{}, fmt.Errorf("unknown command %q: %w", cmdName, core.ErrNotACommand)
 	}
 
 	if len(args) < cmd.MinAmountArguments() {
-		return core.CommandResult{}, core.ErrInvalidCommand{Context: fmt.Sprintf("not enough arguments in %q command. usage: %q", cmd.Name(), cmd.Usage())}
+		return core.Result{}, core.ErrInvalidCommand{Context: fmt.Sprintf("not enough arguments in %q command. usage: %q", cmd.Name(), cmd.Usage())}
 	}
 	if len(args) > cmd.MaxAmountArguments() {
-		return core.CommandResult{}, core.ErrInvalidCommand{Context: fmt.Sprintf("to many arguments in %q command. usage: %q", cmd.Name(), cmd.Usage())}
+		return core.Result{}, core.ErrInvalidCommand{Context: fmt.Sprintf("to many arguments in %q command. usage: %q", cmd.Name(), cmd.Usage())}
 	}
 
 	cmdCtx := core.CommandContext{
@@ -109,7 +107,7 @@ func (c *Cli) Execute(cmdName string, args []string) (core.CommandResult, error)
 	}
 
 	if !cmd.CanExecute(cmdCtx) {
-		return core.CommandResult{}, core.ErrInvalidCommand{Context: fmt.Sprintf("command %q not available in current context.", cmd.Name())}
+		return core.Result{}, core.ErrInvalidCommand{Context: fmt.Sprintf("command %q not available in current context.", cmd.Name())}
 	}
 
 	return cmd.Execute(cmdCtx)
@@ -122,13 +120,27 @@ func (c *Cli) Run() error {
 	for {
 		rawInput := c.GetInput()
 		//if isCommand(rawInput) {
-		cmd, args := parse(rawInput)
-		result, err := c.Execute(cmd, args)
-		if err != nil {
-			// TODO: implement error handling/output via cleanOutput
-			fmt.Println(err)
-			continue
+		result := core.Result{}
+		err := fmt.Errorf("")
+
+		if GetPrefixFrom(rawInput) == "" {
+			//TODO: split into optional interface
+			result, err = c.currentScene.Execute(rawInput)
+			if err != nil {
+				// TODO: implement error handling/output via cleanOutput
+				fmt.Println(err)
+				continue
+			}
+		} else {
+			cmd, args := parse(rawInput)
+			result, err = c.Execute(cmd, args)
+			if err != nil {
+				// TODO: implement error handling/output via cleanOutput
+				fmt.Println(err)
+				continue
+			}
 		}
+
 		if result.NextScene != c.CurrentScene() {
 			fmt.Printf("Entering %s:\n", result.NextScene.GetName())
 			c.currentScene = result.NextScene
@@ -142,7 +154,7 @@ func (c *Cli) Run() error {
 				fmt.Printf("scene returned with error %q", err)
 			}
 		*/
-		fmt.Println(result.Output)
+		fmt.Println(result.Response)
 	}
 }
 

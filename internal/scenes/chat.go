@@ -46,7 +46,7 @@ func (c *CommandExecuteChat) CanExecute(commandCtx core.CommandContext) bool {
 	return ok
 }
 
-func (c *CommandExecuteChat) Execute(commandCtx core.CommandContext) (core.CommandResult, error) {
+func (c *CommandExecuteChat) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	return commandCtx.Runtime.CurrentScene().Execute(commandCtx.Cmd)
 }
 
@@ -72,9 +72,13 @@ func NewSceneChat(runtime core.Runtime, chat database.Chat) (*Chat, error) {
 	return &sceneChat, nil
 }
 
+func (c *Chat) OnEnter() string {
+	return ""
+}
+
 // TODO: need to add id/authorID to cached Messages after commiting to DB
 // instead append to history at the end
-func (c *Chat) Execute(userInput string) (core.CommandResult, error) {
+func (c *Chat) Execute(userInput string) (core.Result, error) {
 	history := append([]cachedMessage{}, c.cachedMessages...)
 	prompt := cachedMessage{
 		Message: communication.Message{
@@ -91,8 +95,8 @@ func (c *Chat) Execute(userInput string) (core.CommandResult, error) {
 	defer cancel()
 	response, err := c.llmClient.GenerateAnswer(ctx, asComMessages(history))
 	if err != nil {
-		return core.CommandResult{
-			Output:    "",
+		return core.Result{
+			Response:  "",
 			NextScene: c,
 		}, err
 	}
@@ -115,8 +119,8 @@ func (c *Chat) Execute(userInput string) (core.CommandResult, error) {
 		Role:      string(prompt.Role),
 	})
 	if err != nil {
-		return core.CommandResult{
-			Output:    "",
+		return core.Result{
+			Response:  "",
 			NextScene: c,
 		}, err
 	}
@@ -130,8 +134,8 @@ func (c *Chat) Execute(userInput string) (core.CommandResult, error) {
 		Role:      string(answer.Role),
 	})
 	if err != nil {
-		return core.CommandResult{
-			Output:    "",
+		return core.Result{
+			Response:  "",
 			NextScene: c,
 		}, err
 	}
@@ -143,8 +147,8 @@ func (c *Chat) Execute(userInput string) (core.CommandResult, error) {
 
 	c.cachedMessages = append(c.cachedMessages, prompt, answer)
 
-	return core.CommandResult{
-		Output:    response,
+	return core.Result{
+		Response:  response,
 		NextScene: c,
 	}, nil
 }
@@ -153,8 +157,8 @@ func (c *Chat) GetName() string {
 	return "Chat"
 }
 
-func (c *Chat) Regenerate() core.CommandResult {
-	return core.CommandResult{Output: "Totally regenerated!", NextScene: c}
+func (c *Chat) Regenerate() core.Result {
+	return core.Result{Response: "Totally regenerated!", NextScene: c}
 }
 
 func (c *Chat) loadData() error {

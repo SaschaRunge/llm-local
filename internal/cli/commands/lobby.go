@@ -21,6 +21,6 @@ func (r *Lobby) CanExecute(commandCtx core.CommandContext) bool {
 	return true
 }
 
-func (r *Lobby) Execute(commandCtx core.CommandContext) (core.CommandResult, error) {
-	return core.CommandResult{Output: "", NextScene: &scenes.Lobby{}}, nil
+func (r *Lobby) Execute(commandCtx core.CommandContext) (core.Result, error) {
+	return core.Result{Response: "", NextScene: &scenes.Lobby{}}, nil
 }

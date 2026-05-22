@@ -22,10 +22,10 @@ func (r *Regenerate) CanExecute(commandCtx core.CommandContext) bool {
 	return isSceneChat
 }
 
-func (r *Regenerate) Execute(commandCtx core.CommandContext) (core.CommandResult, error) {
+func (r *Regenerate) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	chat, ok := commandCtx.Runtime.CurrentScene().(*scenes.Chat)
 	if !ok {
-		return core.CommandResult{}, fmt.Errorf("unexpected error in command /regenerate: type assertion failed")
+		return core.Result{}, fmt.Errorf("unexpected error in command /regenerate: type assertion failed")
 	}
 	return chat.Regenerate(), nil
 }

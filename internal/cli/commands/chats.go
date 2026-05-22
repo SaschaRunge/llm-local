@@ -20,15 +20,15 @@ func (c *Chats) CanExecute(commandCtx core.CommandContext) bool {
 	return true
 }
 
-func (c *Chats) Execute(commandCtx core.CommandContext) (core.CommandResult, error) {
+func (c *Chats) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	chats, err := commandCtx.Runtime.DB().GetAllChats(commandCtx.Runtime.Context())
 	if err != nil {
-		return core.CommandResult{Output: "", NextScene: commandCtx.Runtime.CurrentScene()}, err
+		return core.Result{Response: "", NextScene: commandCtx.Runtime.CurrentScene()}, err
 	}
 
 	if len(chats) == 0 {
 		fmt.Println("No available chats.")
-		return core.CommandResult{Output: "", NextScene: commandCtx.Runtime.CurrentScene()}, nil
+		return core.Result{Response: "", NextScene: commandCtx.Runtime.CurrentScene()}, nil
 	}
 
 	// TODO: return as SPrintf
@@ -38,5 +38,5 @@ func (c *Chats) Execute(commandCtx core.CommandContext) (core.CommandResult, err
 		fmt.Printf("%d. %s\n", i, chat.Name)
 	}
 
-	return core.CommandResult{Output: "", NextScene: commandCtx.Runtime.CurrentScene()}, nil
+	return core.Result{Response: "", NextScene: commandCtx.Runtime.CurrentScene()}, nil
 }

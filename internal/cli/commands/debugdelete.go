@@ -20,12 +20,12 @@ func (c *DebugDelete) CanExecute(commandCtx core.CommandContext) bool {
 	return true
 }
 
-func (d *DebugDelete) Execute(commandCtx core.CommandContext) (core.CommandResult, error) {
+func (d *DebugDelete) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	err := commandCtx.Runtime.DB().DeleteMessages(commandCtx.Runtime.Context())
 	if err != nil {
-		return core.CommandResult{}, err
+		return core.Result{}, err
 	}
 
 	fmt.Println("Debug Delete Messages.")
-	return core.CommandResult{}, nil
+	return core.Result{}, nil
 }

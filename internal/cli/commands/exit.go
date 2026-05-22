@@ -21,9 +21,9 @@ func (l *Exit) CanExecute(commandCtx core.CommandContext) bool {
 	return true
 }
 
-func (l *Exit) Execute(commandCtx core.CommandContext) (core.CommandResult, error) {
+func (l *Exit) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	fmt.Println("=== " + core.Goodbye + " ===")
 	os.Exit(0)
 
-	return core.CommandResult{}, nil
+	return core.Result{}, nil
 }

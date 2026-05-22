@@ -2,16 +2,20 @@ package scenes
 
 import "github.com/SaschaRunge/llm-local/internal/core"
 
-type SceneDummy struct {
+type Dummy struct {
 }
 
-func (c *SceneDummy) Execute(userInput string) (core.CommandResult, error) {
-	return core.CommandResult{
-		NextScene: c,
-		Output:    "",
+func (d *Dummy) Execute(userInput string) (core.Result, error) {
+	return core.Result{
+		NextScene: d,
+		Response:  "",
 	}, nil
 }
 
-func (c *SceneDummy) GetName() string {
+func (d *Dummy) GetName() string {
 	return "DummyScene"
+}
+
+func (d *Dummy) OnEnter() string {
+	return ""
 }

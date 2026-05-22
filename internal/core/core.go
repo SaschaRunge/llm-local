@@ -6,8 +6,8 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/database"
 )
 
-type CommandResult struct {
-	Output    string
+type Result struct {
+	Response  string
 	NextScene Scene
 }
 
@@ -25,7 +25,8 @@ type Runtime interface {
 
 type Scene interface {
 	GetName() string
-	Execute(rawInput string) (CommandResult, error)
+	Execute(rawInput string) (Result, error)
+	OnEnter() string
 }
 
 type Command interface {
@@ -36,5 +37,5 @@ type Command interface {
 	MaxAmountArguments() int
 
 	CanExecute(commandCtx CommandContext) bool
-	Execute(commandCtx CommandContext) (CommandResult, error)
+	Execute(commandCtx CommandContext) (Result, error)
 }

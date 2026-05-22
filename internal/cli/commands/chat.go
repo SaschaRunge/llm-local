@@ -21,13 +21,13 @@ func (c *Chat) CanExecute(commandCtx core.CommandContext) bool {
 	return true
 }
 
-func (c *Chat) Execute(commandCtx core.CommandContext) (core.CommandResult, error) {
+func (c *Chat) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	chats, err := commandCtx.Runtime.DB().GetChatsLikeName(commandCtx.Runtime.Context(), commandCtx.Args[0])
 	if err != nil {
-		return core.CommandResult{}, err
+		return core.Result{}, err
 	}
 	if len(chats) == 0 {
-		return core.CommandResult{}, fmt.Errorf("no chat with name %q", commandCtx.Args[0])
+		return core.Result{}, fmt.Errorf("no chat with name %q", commandCtx.Args[0])
 	}
 
 	/*// TODO: selection from multiple personas
@@ -44,8 +44,8 @@ func (c *Chat) Execute(commandCtx core.CommandContext) (core.CommandResult, erro
 		Name: personas[0].Name,
 	})*/
 	if err != nil {
-		return core.CommandResult{}, err
+		return core.Result{}, err
 	}
 
-	return core.CommandResult{Output: "", NextScene: sceneChat}, nil
+	return core.Result{Response: "", NextScene: sceneChat}, nil
 }
