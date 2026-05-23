@@ -116,7 +116,8 @@ func (c *Cli) Run() error {
 		//if isCommand(rawInput) {
 		var result core.Result
 		var err error
-		if GetPrefixFrom(rawInput) == "" {
+		prefix := GetPrefixFrom(rawInput)
+		if prefix == "" {
 			//TODO: split into optional interface
 			result, err = c.currentScene.Execute(rawInput)
 			if err != nil {
@@ -147,6 +148,8 @@ func (c *Cli) Run() error {
 		fmt.Println(result.Response)
 	}
 }
+
+func preprocess(prefix, rawInput string) (cmd string, args string)
 
 func extractCommandString(rawInput string) (cmd string, args string) {
 	parts := strings.SplitN(rawInput, " ", 2)

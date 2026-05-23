@@ -37,27 +37,6 @@ func (c *Client) load(model string) error {
 	c.provider = provider
 	c.model = model
 
-	/*
-		if len(messageHistory) == 0 {
-			systemPrompt, err := loadSystemPrompt()
-			if err != nil {
-				return err
-			}
-			c.messageHistory = append(c.messageHistory, anyllm.Message{
-				Role:    anyllm.RoleSystem,
-				Content: systemPrompt,
-			})
-		}
-
-		for i, message := range messageHistory {
-			if i == 0 {
-				if message.Role != anyllm.RoleSystem {
-					return fmt.Errorf("unable to load llm client: first message in history is not system prompt")
-				}
-			}
-			c.messageHistory = append(c.messageHistory, translate(message))
-		}*/
-
 	return nil
 }
 

@@ -68,6 +68,13 @@ func (c *Chat) GetName() string {
 	return "Chat"
 }
 
+func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
+	return core.Result{
+		Response:  "",
+		NextScene: c,
+	}, nil
+}
+
 // TODO: need to add id/authorID to cached Messages after commiting to DB
 // instead append to history at the end
 func (c *Chat) Execute(userInput string) (core.Result, error) {
