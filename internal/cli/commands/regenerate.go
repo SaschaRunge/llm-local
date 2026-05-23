@@ -30,6 +30,6 @@ func (r *Regenerate) Execute(commandCtx core.CommandContext) (core.Result, error
 	return chat.Regenerate(commandCtx.Args[0])
 }
 
-func (r *Regenerate) ParseArgs(args string) []string {
-	return []string{args}
+func (r *Regenerate) ParseArgs(rawArgs string) []string {
+	return []string{rawArgs}
 }

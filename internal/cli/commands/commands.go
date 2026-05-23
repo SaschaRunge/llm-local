@@ -8,6 +8,7 @@ type Library struct{}
 
 func (l *Library) GetAll() []core.Command {
 	return []core.Command{
+		&atCharacter{},
 		&Chat{},
 		&Chats{},
 		&DebugDelete{},

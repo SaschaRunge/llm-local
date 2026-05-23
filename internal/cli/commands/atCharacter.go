@@ -29,6 +29,6 @@ func (r *atCharacter) Execute(commandCtx core.CommandContext) (core.Result, erro
 	return chat.AtCharacter(commandCtx.Args[0], commandCtx.Args[1])
 }
 
-func (r *atCharacter) ParseArgs(args string) []string {
-	return []string{args}
+func (r *atCharacter) ParseArgs(rawArgs string) []string {
+	return []string{rawArgs}
 }

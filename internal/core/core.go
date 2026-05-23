@@ -29,7 +29,7 @@ type Command interface {
 }
 
 type CustomParser interface {
-	ParseArgs(args string) []string
+	ParseArgs(rawArgs string) []string
 }
 
 type Runtime interface {
