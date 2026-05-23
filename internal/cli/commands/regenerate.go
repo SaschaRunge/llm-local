@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/SaschaRunge/llm-local/internal/core"
 	"github.com/SaschaRunge/llm-local/internal/scenes"
@@ -28,7 +27,7 @@ func (r *Regenerate) Execute(commandCtx core.CommandContext) (core.Result, error
 	if !ok {
 		return core.Result{}, fmt.Errorf("unexpected error in command /regenerate: type assertion failed")
 	}
-	return chat.Regenerate(strings.Join(commandCtx.Args, " "))
+	return chat.Regenerate(commandCtx.Args[0])
 }
 
 func (r *Regenerate) ParseArgs(args string) []string {
