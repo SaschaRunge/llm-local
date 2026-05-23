@@ -161,3 +161,23 @@ func (q *Queries) GetMessagesByChatID(ctx context.Context, chatID uuid.UUID) ([]
 	}
 	return items, nil
 }
+
+const replaceMessage = `-- name: ReplaceMessage :exec
+UPDATE messages
+SET 
+    updated_at = NOW(),
+    reasoning = $2,
+    content = $3
+WHERE id = $1
+`
+
+type ReplaceMessageParams struct {
+	ID        uuid.UUID
+	Reasoning sql.NullString
+	Content   string
+}
+
+func (q *Queries) ReplaceMessage(ctx context.Context, arg ReplaceMessageParams) error {
+	_, err := q.db.ExecContext(ctx, replaceMessage, arg.ID, arg.Reasoning, arg.Content)
+	return err
+}

@@ -23,16 +23,6 @@ type Cli struct {
 	scanner         *bufio.Scanner
 }
 
-type commandInfo struct {
-	name        string
-	description string
-	usage       string
-	//command            core.Command
-	//requiredScene      core.Scene
-	minAmountArguments int
-	maxAmountArguments int
-}
-
 type CommandAlias struct {
 	alias map[string][]string
 }
@@ -87,11 +77,14 @@ func GetPrefixFrom(rawInput string) string {
 	return ""
 }
 
-func (c *Cli) Execute(cmdName string, args []string) (core.Result, error) {
-	cmd, exists := c.CommandRegistry[cmdName]
-
-	if !exists {
-		return core.Result{}, fmt.Errorf("unknown command %q: %w", cmdName, core.ErrNotACommand)
+func (c *Cli) Execute(cmd core.Command, rawArgs string) (core.Result, error) {
+	var args []string
+	switch parser := cmd.(type) {
+	case core.CustomParser:
+		args = parser.ParseArgs(rawArgs)
+		//fmt.Printf("%v", args)
+	default:
+		args = parse((rawArgs))
 	}
 
 	if len(args) < cmd.MinAmountArguments() {
@@ -117,12 +110,12 @@ func (c *Cli) Run() error {
 	fmt.Println("=== " + core.Greeting + " ===")
 	fmt.Printf("Entering %s:\n", c.CurrentScene().GetName())
 
+	//TODO: clean up flow
 	for {
 		rawInput := c.GetInput()
 		//if isCommand(rawInput) {
-		result := core.Result{}
-		err := fmt.Errorf("")
-
+		var result core.Result
+		var err error
 		if GetPrefixFrom(rawInput) == "" {
 			//TODO: split into optional interface
 			result, err = c.currentScene.Execute(rawInput)
@@ -132,12 +125,16 @@ func (c *Cli) Run() error {
 				continue
 			}
 		} else {
-			cmd, args := parse(rawInput)
-			result, err = c.Execute(cmd, args)
-			if err != nil {
-				// TODO: implement error handling/output via cleanOutput
-				fmt.Println(err)
-				continue
+			cmd, rawArgs := extractCommandString(rawInput)
+			if _, exists := c.CommandRegistry[cmd]; !exists {
+				fmt.Printf("unknown command %q: %q", cmd, core.ErrNotACommand)
+			} else {
+				result, err = c.Execute(c.CommandRegistry[cmd], rawArgs)
+				if err != nil {
+					// TODO: implement error handling/output via cleanOutput
+					fmt.Println(err)
+					continue
+				}
 			}
 		}
 
@@ -147,24 +144,26 @@ func (c *Cli) Run() error {
 			continue
 		}
 
-		//}
-		/*
-			result, err := c.CurrentScene().Execute(rawInput)
-			if err != nil {
-				fmt.Printf("scene returned with error %q", err)
-			}
-		*/
 		fmt.Println(result.Response)
 	}
 }
 
-func parse(rawInput string) (cmd string, args []string) {
-	parts := strings.Split(rawInput, " ")
+func extractCommandString(rawInput string) (cmd string, args string) {
+	parts := strings.SplitN(rawInput, " ", 2)
+
 	cmd = parts[0]
-	args = []string{}
-	args = append(args, parts[1:]...)
+	if len(parts) >= 2 {
+		args = parts[1]
+	}
 
 	return cmd, args
+}
+
+func parse(rawArgs string) (args []string) {
+	if rawArgs == "" {
+		return args
+	}
+	return strings.Split(rawArgs, " ")
 }
 
 func getRegistry() map[string]core.Command {

@@ -34,3 +34,12 @@ ORDER BY idx ASC;
 
 -- name: DeleteMessages :exec
 DELETE FROM messages;
+
+-- name: ReplaceMessage :exec
+UPDATE messages
+SET 
+    updated_at = NOW(),
+    reasoning = $2,
+    content = $3
+WHERE id = $1;
+

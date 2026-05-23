@@ -17,6 +17,21 @@ type CommandContext struct {
 	Runtime Runtime
 }
 
+type Command interface {
+	Name() string
+	Description() string
+	Usage() string
+	MinAmountArguments() int
+	MaxAmountArguments() int
+
+	CanExecute(commandCtx CommandContext) bool
+	Execute(commandCtx CommandContext) (Result, error)
+}
+
+type CustomParser interface {
+	ParseArgs(args string) []string
+}
+
 type Runtime interface {
 	Context() context.Context
 	CurrentScene() Scene
@@ -27,15 +42,4 @@ type Scene interface {
 	GetName() string
 	Execute(rawInput string) (Result, error)
 	OnEnter() string
-}
-
-type Command interface {
-	Name() string
-	Description() string
-	Usage() string
-	MinAmountArguments() int
-	MaxAmountArguments() int
-
-	CanExecute(commandCtx CommandContext) bool
-	Execute(commandCtx CommandContext) (Result, error)
 }

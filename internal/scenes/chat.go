@@ -38,18 +38,6 @@ type cachedMessage struct {
 
 type Character = database.GetCharactersInChatRow
 
-// TODO: move to fallback
-type CommandExecuteChat struct{}
-
-func (c *CommandExecuteChat) CanExecute(commandCtx core.CommandContext) bool {
-	_, ok := commandCtx.Runtime.CurrentScene().(*Chat)
-	return ok
-}
-
-func (c *CommandExecuteChat) Execute(commandCtx core.CommandContext) (core.Result, error) {
-	return commandCtx.Runtime.CurrentScene().Execute(commandCtx.Cmd)
-}
-
 func NewSceneChat(runtime core.Runtime, chat database.Chat) (*Chat, error) {
 	sceneChat := Chat{
 		runtime: runtime,
@@ -76,11 +64,15 @@ func (c *Chat) OnEnter() string {
 	return ""
 }
 
+func (c *Chat) GetName() string {
+	return "Chat"
+}
+
 // TODO: need to add id/authorID to cached Messages after commiting to DB
 // instead append to history at the end
 func (c *Chat) Execute(userInput string) (core.Result, error) {
 	history := append([]cachedMessage{}, c.cachedMessages...)
-	prompt := cachedMessage{
+	message := cachedMessage{
 		Message: communication.Message{
 			Name:      c.userCharacter.Name,
 			Role:      communication.RoleUser,
@@ -89,7 +81,7 @@ func (c *Chat) Execute(userInput string) (core.Result, error) {
 		},
 	}
 
-	history = append(history, prompt)
+	history = append(history, message)
 
 	ctx, cancel := context.WithTimeout(c.runtime.Context(), generateAnswerTimeoutInSeconds*time.Second)
 	defer cancel()
@@ -111,12 +103,12 @@ func (c *Chat) Execute(userInput string) (core.Result, error) {
 	}
 
 	//TODO: rollback entire commit if send fails on either Add
-	promptInDB, err := c.runtime.DB().AddMessage(c.runtime.Context(), database.AddMessageParams{
+	messageInDB, err := c.runtime.DB().AddMessage(c.runtime.Context(), database.AddMessageParams{
 		Reasoning: sql.NullString{},
-		Content:   prompt.Content,
+		Content:   message.Content,
 		ChatID:    c.ID,
 		AuthorID:  c.userCharacter.ID,
-		Role:      string(prompt.Role),
+		Role:      string(message.Role),
 	})
 	if err != nil {
 		return core.Result{
@@ -140,12 +132,12 @@ func (c *Chat) Execute(userInput string) (core.Result, error) {
 		}, err
 	}
 
-	prompt.id = promptInDB.ID
-	prompt.authorID = promptInDB.AuthorID
+	message.id = messageInDB.ID
+	message.authorID = messageInDB.AuthorID
 	answer.id = answerInDB.ID
 	answer.authorID = answerInDB.AuthorID
 
-	c.cachedMessages = append(c.cachedMessages, prompt, answer)
+	c.cachedMessages = append(c.cachedMessages, message, answer)
 
 	return core.Result{
 		Response:  response,
@@ -153,12 +145,73 @@ func (c *Chat) Execute(userInput string) (core.Result, error) {
 	}, nil
 }
 
-func (c *Chat) GetName() string {
-	return "Chat"
-}
+func (c *Chat) Regenerate(userInput string) (core.Result, error) {
+	history := append([]cachedMessage{}, c.cachedMessages...)
 
-func (c *Chat) Regenerate() core.Result {
-	return core.Result{Response: "Totally regenerated!", NextScene: c}
+	if len(history) == 0 {
+		return core.Result{
+			Response:  "",
+			NextScene: c,
+		}, fmt.Errorf("no chat history, nothing to regenerate")
+	}
+
+	lastMessage := history[len(history)-1]
+	regenerationPrompt := fmt.Sprintf(
+		"[SYSTEM: The user requested a regeneration of your previous answer with the following comment: %q. Please rephrase accordingly. Your previous answer was: %q.]",
+		userInput, lastMessage.Content)
+	message := cachedMessage{
+		Message: communication.Message{
+			Name:      "System",
+			Role:      communication.RoleUser,
+			Reasoning: "",
+			Content:   regenerationPrompt,
+		},
+	}
+
+	history[len(history)-1] = message
+
+	ctxResponse, cancel := context.WithTimeout(c.runtime.Context(), generateAnswerTimeoutInSeconds*time.Second)
+	defer cancel()
+	response, err := c.llmClient.GenerateAnswer(ctxResponse, asComMessages(history))
+	if err != nil {
+		return core.Result{
+			Response:  "",
+			NextScene: c,
+		}, err
+	}
+
+	answer := cachedMessage{
+		id:       lastMessage.id,
+		authorID: lastMessage.authorID,
+		Message: communication.Message{
+			Name:      lastMessage.Name,
+			Role:      communication.RoleAssistant,
+			Reasoning: "",
+			Content:   response,
+		},
+	}
+
+	db := c.runtime.DB()
+	ctx := c.runtime.Context()
+
+	err = db.ReplaceMessage(ctx, database.ReplaceMessageParams{
+		ID:        answer.id,
+		Reasoning: sql.NullString{},
+		Content:   answer.Content,
+	})
+	if err != nil {
+		return core.Result{
+			Response:  "",
+			NextScene: c,
+		}, err
+	}
+
+	c.cachedMessages[len(history)-1] = answer
+
+	return core.Result{
+		Response:  response,
+		NextScene: c,
+	}, nil
 }
 
 func (c *Chat) loadData() error {
@@ -222,8 +275,4 @@ func mapFromDBUserCharacter(userCharacter database.GetUserCharacterInChatByIDRow
 		Name:         userCharacter.Name,
 		SystemPrompt: userCharacter.SystemPrompt,
 	}
-}
-
-func (c *Chat) writeToHistory() error {
-	return nil
 }
