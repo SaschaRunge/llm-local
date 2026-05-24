@@ -16,7 +16,7 @@ const getCharactersInChat = `-- name: GetCharactersInChat :many
 SELECT 
 characters.id, 
 characters.name,
-characters.system_prompt
+characters.card
 FROM chat_subscriptions 
 INNER JOIN characters
     ON chat_subscriptions.character_id = characters.id
@@ -24,9 +24,9 @@ WHERE chat_subscriptions.chat_id = $1
 `
 
 type GetCharactersInChatRow struct {
-	ID           uuid.UUID
-	Name         string
-	SystemPrompt sql.NullString
+	ID   uuid.UUID
+	Name string
+	Card sql.NullString
 }
 
 func (q *Queries) GetCharactersInChat(ctx context.Context, chatID uuid.UUID) ([]GetCharactersInChatRow, error) {
@@ -38,7 +38,7 @@ func (q *Queries) GetCharactersInChat(ctx context.Context, chatID uuid.UUID) ([]
 	var items []GetCharactersInChatRow
 	for rows.Next() {
 		var i GetCharactersInChatRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.SystemPrompt); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name, &i.Card); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

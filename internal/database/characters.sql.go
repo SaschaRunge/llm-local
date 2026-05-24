@@ -13,7 +13,7 @@ import (
 )
 
 const addCharacter = `-- name: AddCharacter :one
-INSERT INTO characters(id, created_at, updated_at, name, system_prompt, is_user)
+INSERT INTO characters(id, created_at, updated_at, name, card, is_user)
 VALUES (
     gen_random_uuid(),
     NOW(),
@@ -22,17 +22,17 @@ VALUES (
     $2,
     $3
 )
-RETURNING id, created_at, updated_at, deleted_at, name, system_prompt, is_user, is_system
+RETURNING id, created_at, updated_at, deleted_at, name, card, is_user, is_system
 `
 
 type AddCharacterParams struct {
-	Name         string
-	SystemPrompt sql.NullString
-	IsUser       sql.NullBool
+	Name   string
+	Card   sql.NullString
+	IsUser sql.NullBool
 }
 
 func (q *Queries) AddCharacter(ctx context.Context, arg AddCharacterParams) (Character, error) {
-	row := q.db.QueryRowContext(ctx, addCharacter, arg.Name, arg.SystemPrompt, arg.IsUser)
+	row := q.db.QueryRowContext(ctx, addCharacter, arg.Name, arg.Card, arg.IsUser)
 	var i Character
 	err := row.Scan(
 		&i.ID,
@@ -40,7 +40,7 @@ func (q *Queries) AddCharacter(ctx context.Context, arg AddCharacterParams) (Cha
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.Name,
-		&i.SystemPrompt,
+		&i.Card,
 		&i.IsUser,
 		&i.IsSystem,
 	)
@@ -76,16 +76,16 @@ func (q *Queries) GetCharactersLikeName(ctx context.Context, name string) ([]uui
 }
 
 const getUserCharactersLikeName = `-- name: GetUserCharactersLikeName :many
-SELECT id, name, system_prompt FROM characters 
+SELECT id, name, card FROM characters 
 WHERE 
     name LIKE $1 AND
     is_user = 1
 `
 
 type GetUserCharactersLikeNameRow struct {
-	ID           uuid.UUID
-	Name         string
-	SystemPrompt sql.NullString
+	ID   uuid.UUID
+	Name string
+	Card sql.NullString
 }
 
 func (q *Queries) GetUserCharactersLikeName(ctx context.Context, name string) ([]GetUserCharactersLikeNameRow, error) {
@@ -97,7 +97,7 @@ func (q *Queries) GetUserCharactersLikeName(ctx context.Context, name string) ([
 	var items []GetUserCharactersLikeNameRow
 	for rows.Next() {
 		var i GetUserCharactersLikeNameRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.SystemPrompt); err != nil {
+		if err := rows.Scan(&i.ID, &i.Name, &i.Card); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -12,14 +12,14 @@ import (
 )
 
 type Character struct {
-	ID           uuid.UUID
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	DeletedAt    sql.NullTime
-	Name         string
-	SystemPrompt sql.NullString
-	IsUser       sql.NullBool
-	IsSystem     sql.NullBool
+	ID        uuid.UUID
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt sql.NullTime
+	Name      string
+	Card      sql.NullString
+	IsUser    sql.NullBool
+	IsSystem  sql.NullBool
 }
 
 type Chat struct {

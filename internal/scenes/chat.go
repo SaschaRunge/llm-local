@@ -172,14 +172,6 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 	}, nil
 }
 
-func (c *Chat) GetAvailableCharacters() []string {
-	availableCharacters := []string{}
-	for _, char := range c.characters {
-		availableCharacters = append(availableCharacters, char.Name)
-	}
-	return availableCharacters
-}
-
 func (c *Chat) archiveCurrentTurn(userMessage, assistantMessage cachedMessage) error {
 	//TODO: rollback entire commit if send fails on either Add
 	userMessageInDB, err := c.runtime.DB().AddMessage(c.runtime.Context(), database.AddMessageParams{
@@ -273,6 +265,14 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 	}, nil
 }
 
+func (c *Chat) GetAvailableCharacters() []string {
+	availableCharacters := []string{}
+	for _, char := range c.characters {
+		availableCharacters = append(availableCharacters, char.Name)
+	}
+	return availableCharacters
+}
+
 func (c *Chat) loadData() error {
 	db := c.runtime.DB()
 	ctx := c.runtime.Context()
@@ -330,8 +330,8 @@ func asComMessages(messages []cachedMessage) []communication.Message {
 
 func mapFromDBUserCharacter(userCharacter database.GetUserCharacterInChatByIDRow) character {
 	return character{
-		ID:           userCharacter.ID,
-		Name:         userCharacter.Name,
-		SystemPrompt: userCharacter.SystemPrompt,
+		ID:   userCharacter.ID,
+		Name: userCharacter.Name,
+		Card: userCharacter.Card,
 	}
 }

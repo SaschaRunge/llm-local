@@ -20,7 +20,7 @@ WHERE name LIKE $1;
 SELECT * FROM chats;
 
 -- name: GetUserCharacterInChatByID :one
-SELECT id, name, system_prompt FROM characters
+SELECT id, name, card FROM characters
 WHERE characters.id = (
     SELECT user_character_id 
     FROM chats

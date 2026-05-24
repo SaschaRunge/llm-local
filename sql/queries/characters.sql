@@ -1,5 +1,5 @@
 -- name: AddCharacter :one
-INSERT INTO characters(id, created_at, updated_at, name, system_prompt, is_user)
+INSERT INTO characters(id, created_at, updated_at, name, card, is_user)
 VALUES (
     gen_random_uuid(),
     NOW(),
@@ -15,7 +15,7 @@ SELECT id FROM characters
 WHERE name LIKE $1;
 
 -- name: GetUserCharactersLikeName :many
-SELECT id, name, system_prompt FROM characters 
+SELECT id, name, card FROM characters 
 WHERE 
     name LIKE $1 AND
     is_user = 1;

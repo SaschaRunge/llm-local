@@ -10,7 +10,7 @@ VALUES(
 SELECT 
 characters.id, 
 characters.name,
-characters.system_prompt
+characters.card
 FROM chat_subscriptions 
 INNER JOIN characters
     ON chat_subscriptions.character_id = characters.id

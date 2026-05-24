@@ -142,7 +142,7 @@ func (q *Queries) GetScenarioFromChatByID(ctx context.Context, id uuid.UUID) (sq
 }
 
 const getUserCharacterInChatByID = `-- name: GetUserCharacterInChatByID :one
-SELECT id, name, system_prompt FROM characters
+SELECT id, name, card FROM characters
 WHERE characters.id = (
     SELECT user_character_id 
     FROM chats
@@ -151,14 +151,14 @@ WHERE characters.id = (
 `
 
 type GetUserCharacterInChatByIDRow struct {
-	ID           uuid.UUID
-	Name         string
-	SystemPrompt sql.NullString
+	ID   uuid.UUID
+	Name string
+	Card sql.NullString
 }
 
 func (q *Queries) GetUserCharacterInChatByID(ctx context.Context, id uuid.UUID) (GetUserCharacterInChatByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserCharacterInChatByID, id)
 	var i GetUserCharacterInChatByIDRow
-	err := row.Scan(&i.ID, &i.Name, &i.SystemPrompt)
+	err := row.Scan(&i.ID, &i.Name, &i.Card)
 	return i, err
 }
