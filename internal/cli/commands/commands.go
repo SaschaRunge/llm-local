@@ -7,11 +7,12 @@ import (
 func All() []core.Command {
 	return []core.Command{
 		&atCharacter{},
-		&Chat{},
-		&Chats{},
-		&DebugDelete{},
-		&Exit{},
-		&Lobby{},
-		&Regenerate{},
+		&characters{},
+		&chat{},
+		&chats{},
+		&debugDelete{},
+		&exit{},
+		&lobby{},
+		&regenerate{},
 	}
 }

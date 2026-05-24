@@ -7,21 +7,21 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/core"
 )
 
-type Exit struct{}
+type exit struct{}
 
-func (l *Exit) Name() string { return "/exit" }
-func (l *Exit) Description() string {
+func (e *exit) Name() string { return "/exit" }
+func (e *exit) Description() string {
 	return "Exits the program."
 }
-func (l *Exit) Usage() string     { return fmt.Sprintf("%s", l.Name()) }
-func (l *Exit) MinArguments() int { return 0 }
-func (l *Exit) MaxArguments() int { return 0 }
+func (e *exit) Usage() string     { return fmt.Sprintf("%s", e.Name()) }
+func (e *exit) MinArguments() int { return 0 }
+func (e *exit) MaxArguments() int { return 0 }
 
-func (l *Exit) CanExecute(commandCtx core.CommandContext) bool {
+func (e *exit) CanExecute(commandCtx core.CommandContext) bool {
 	return true
 }
 
-func (l *Exit) Execute(commandCtx core.CommandContext) (core.Result, error) {
+func (e *exit) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	fmt.Println("=== " + core.Goodbye + " ===")
 	os.Exit(0)
 

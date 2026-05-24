@@ -2,25 +2,26 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/SaschaRunge/llm-local/internal/core"
 )
 
-type Chats struct{}
+type chats struct{}
 
-func (c *Chats) Name() string { return "/chats" }
-func (c *Chats) Description() string {
+func (c *chats) Name() string { return "/chats" }
+func (c *chats) Description() string {
 	return "Shows the available chats for the current user."
 }
-func (c *Chats) Usage() string     { return fmt.Sprintf("%s", c.Name()) }
-func (c *Chats) MinArguments() int { return 0 }
-func (c *Chats) MaxArguments() int { return 0 }
+func (c *chats) Usage() string     { return fmt.Sprintf("%s", c.Name()) }
+func (c *chats) MinArguments() int { return 0 }
+func (c *chats) MaxArguments() int { return 0 }
 
-func (c *Chats) CanExecute(commandCtx core.CommandContext) bool {
+func (c *chats) CanExecute(commandCtx core.CommandContext) bool {
 	return true
 }
 
-func (c *Chats) Execute(commandCtx core.CommandContext) (core.Result, error) {
+func (c *chats) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	chats, err := commandCtx.Runtime.DB().GetAllChats(commandCtx.Runtime.Context())
 	if err != nil {
 		return core.Result{}, err
@@ -31,12 +32,14 @@ func (c *Chats) Execute(commandCtx core.CommandContext) (core.Result, error) {
 		return core.Result{}, nil
 	}
 
-	// TODO: return as SPrintf
+	var response strings.Builder
 
-	fmt.Println("Available chats:")
 	for i, chat := range chats {
-		fmt.Printf("%d. %s\n", i, chat.Name)
+		_, err := fmt.Fprintf(&response, "%d. %s\n", i+1, chat.Name)
+		if err != nil {
+			return core.Result{}, fmt.Errorf("unexpected error in command %q: %w", c.Name(), err)
+		}
 	}
 
-	return core.Result{}, nil
+	return core.Result{Response: response.String()}, nil
 }

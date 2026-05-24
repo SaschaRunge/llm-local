@@ -7,21 +7,21 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/scenes"
 )
 
-type Chat struct{}
+type chat struct{}
 
-func (c *Chat) Name() string { return "/chat" }
-func (c *Chat) Description() string {
+func (c *chat) Name() string { return "/chat" }
+func (c *chat) Description() string {
 	return "Starts the chat interface. Will load or create the chat [chat_name]."
 }
-func (c *Chat) Usage() string     { return fmt.Sprintf("%s [chat_name]", c.Name()) }
-func (c *Chat) MinArguments() int { return 1 }
-func (c *Chat) MaxArguments() int { return 1 }
+func (c *chat) Usage() string     { return fmt.Sprintf("%s [chat_name]", c.Name()) }
+func (c *chat) MinArguments() int { return 1 }
+func (c *chat) MaxArguments() int { return 1 }
 
-func (c *Chat) CanExecute(commandCtx core.CommandContext) bool {
+func (c *chat) CanExecute(commandCtx core.CommandContext) bool {
 	return true
 }
 
-func (c *Chat) Execute(commandCtx core.CommandContext) (core.Result, error) {
+func (c *chat) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	chats, err := commandCtx.Runtime.DB().GetChatsLikeName(commandCtx.Runtime.Context(), commandCtx.Args[0])
 	if err != nil {
 		return core.Result{}, err

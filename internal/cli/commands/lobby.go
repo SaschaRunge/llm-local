@@ -7,20 +7,20 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/scenes"
 )
 
-type Lobby struct{}
+type lobby struct{}
 
-func (r *Lobby) Name() string { return "/lobby" }
-func (r *Lobby) Description() string {
+func (l *lobby) Name() string { return "/lobby" }
+func (l *lobby) Description() string {
 	return "Enters the lobby."
 }
-func (r *Lobby) Usage() string     { return fmt.Sprintf("%s", r.Name()) }
-func (r *Lobby) MinArguments() int { return 0 }
-func (r *Lobby) MaxArguments() int { return 0 }
+func (l *lobby) Usage() string     { return fmt.Sprintf("%s", l.Name()) }
+func (l *lobby) MinArguments() int { return 0 }
+func (l *lobby) MaxArguments() int { return 0 }
 
-func (r *Lobby) CanExecute(commandCtx core.CommandContext) bool {
+func (l *lobby) CanExecute(commandCtx core.CommandContext) bool {
 	return true
 }
 
-func (r *Lobby) Execute(commandCtx core.CommandContext) (core.Result, error) {
+func (l *lobby) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	return core.Result{Response: "", NextScene: &scenes.Lobby{}}, nil
 }
