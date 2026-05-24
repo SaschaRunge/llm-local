@@ -12,9 +12,9 @@ func (c *Chats) Name() string { return "/chats" }
 func (c *Chats) Description() string {
 	return "Shows the available chats for the current user."
 }
-func (c *Chats) Usage() string           { return fmt.Sprintf("%s", c.Name()) }
-func (c *Chats) MinAmountArguments() int { return 0 }
-func (c *Chats) MaxAmountArguments() int { return 0 }
+func (c *Chats) Usage() string     { return fmt.Sprintf("%s", c.Name()) }
+func (c *Chats) MinArguments() int { return 0 }
+func (c *Chats) MaxArguments() int { return 0 }
 
 func (c *Chats) CanExecute(commandCtx core.CommandContext) bool {
 	return true
@@ -23,12 +23,12 @@ func (c *Chats) CanExecute(commandCtx core.CommandContext) bool {
 func (c *Chats) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	chats, err := commandCtx.Runtime.DB().GetAllChats(commandCtx.Runtime.Context())
 	if err != nil {
-		return core.Result{Response: "", NextScene: commandCtx.Runtime.CurrentScene()}, err
+		return core.Result{}, err
 	}
 
 	if len(chats) == 0 {
 		fmt.Println("No available chats.")
-		return core.Result{Response: "", NextScene: commandCtx.Runtime.CurrentScene()}, nil
+		return core.Result{}, nil
 	}
 
 	// TODO: return as SPrintf
@@ -38,5 +38,5 @@ func (c *Chats) Execute(commandCtx core.CommandContext) (core.Result, error) {
 		fmt.Printf("%d. %s\n", i, chat.Name)
 	}
 
-	return core.Result{Response: "", NextScene: commandCtx.Runtime.CurrentScene()}, nil
+	return core.Result{}, nil
 }

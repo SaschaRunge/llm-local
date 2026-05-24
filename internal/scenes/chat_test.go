@@ -130,7 +130,7 @@ func TestSceneChat(t *testing.T) {
 
 	runtime.inputs = []string{"gibberish", "more gibberish", "/exit"}
 	for i := range len(runtime.inputs) {
-		sceneTest, err := sceneChat.Execute(runtime.inputs[i])
+		sceneTest, err := sceneChat.HandleRawInput(runtime.inputs[i])
 		if err != nil {
 			t.Errorf("unexpected error during sceneChat.Execute: %v", err)
 		}

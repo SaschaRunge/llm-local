@@ -4,9 +4,7 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/core"
 )
 
-type Library struct{}
-
-func (l *Library) GetAll() []core.Command {
+func All() []core.Command {
 	return []core.Command{
 		&atCharacter{},
 		&Chat{},

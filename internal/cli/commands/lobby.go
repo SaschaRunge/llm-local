@@ -13,9 +13,9 @@ func (r *Lobby) Name() string { return "/lobby" }
 func (r *Lobby) Description() string {
 	return "Enters the lobby."
 }
-func (r *Lobby) Usage() string           { return fmt.Sprintf("%s", r.Name()) }
-func (r *Lobby) MinAmountArguments() int { return 0 }
-func (r *Lobby) MaxAmountArguments() int { return 0 }
+func (r *Lobby) Usage() string     { return fmt.Sprintf("%s", r.Name()) }
+func (r *Lobby) MinArguments() int { return 0 }
+func (r *Lobby) MaxArguments() int { return 0 }
 
 func (r *Lobby) CanExecute(commandCtx core.CommandContext) bool {
 	return true

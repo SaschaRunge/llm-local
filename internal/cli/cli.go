@@ -3,12 +3,11 @@ package cli
 import (
 	"bufio"
 	"context"
-	_ "errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/SaschaRunge/llm-local/internal/cli/commands"
+	"github.com/SaschaRunge/llm-local/internal/cli/parser"
 	"github.com/SaschaRunge/llm-local/internal/core"
 	"github.com/SaschaRunge/llm-local/internal/database"
 	"github.com/SaschaRunge/llm-local/internal/scenes"
@@ -38,6 +37,7 @@ func New(dbQueries *database.Queries) *Cli {
 }
 
 // Implements core.Runtime
+
 func (c *Cli) Context() context.Context {
 	return c.context
 }
@@ -62,36 +62,20 @@ func (c *Cli) GetInput() string {
 	return input
 }
 
-func GetPrefixFrom(rawInput string) string {
-	validPrefixes := []string{
-		"/",
-		"@",
-	}
-
-	for _, prefix := range validPrefixes {
-		if strings.HasPrefix(rawInput, prefix) {
-			return prefix
-		}
-	}
-
-	return ""
-}
-
 func (c *Cli) Execute(cmd core.Command, rawArgs string) (core.Result, error) {
 	var args []string
-	switch parser := cmd.(type) {
+	switch customParser := cmd.(type) {
 	case core.CustomParser:
-		args = parser.ParseArgs(rawArgs)
-		//fmt.Printf("%v", args)
+		args = customParser.ParseArgs(rawArgs)
 	default:
-		args = parse((rawArgs))
+		args = parser.ParseArgs(rawArgs)
 	}
 
-	if len(args) < cmd.MinAmountArguments() {
+	if len(args) < cmd.MinArguments() {
 		return core.Result{}, core.ErrInvalidCommand{Context: fmt.Sprintf("not enough arguments in %q command. usage: %q", cmd.Name(), cmd.Usage())}
 	}
-	if len(args) > cmd.MaxAmountArguments() {
-		return core.Result{}, core.ErrInvalidCommand{Context: fmt.Sprintf("to many arguments in %q command. usage: %q", cmd.Name(), cmd.Usage())}
+	if len(args) > cmd.MaxArguments() {
+		return core.Result{}, core.ErrInvalidCommand{Context: fmt.Sprintf("too many arguments in %q command. usage: %q", cmd.Name(), cmd.Usage())}
 	}
 
 	cmdCtx := core.CommandContext{
@@ -100,7 +84,7 @@ func (c *Cli) Execute(cmd core.Command, rawArgs string) (core.Result, error) {
 	}
 
 	if !cmd.CanExecute(cmdCtx) {
-		return core.Result{}, core.ErrInvalidCommand{Context: fmt.Sprintf("command %q not available in current context.", cmd.Name())}
+		return core.Result{}, core.ErrInvalidCommand{Context: fmt.Sprintf("command %q not available in scene %q.", cmd.Name(), c.CurrentScene().GetName())}
 	}
 
 	return cmd.Execute(cmdCtx)
@@ -110,68 +94,64 @@ func (c *Cli) Run() error {
 	fmt.Println("=== " + core.Greeting + " ===")
 	fmt.Printf("Entering %s:\n", c.CurrentScene().GetName())
 
-	//TODO: clean up flow
 	for {
-		rawInput := c.GetInput()
-		//if isCommand(rawInput) {
 		var result core.Result
 		var err error
-		prefix := GetPrefixFrom(rawInput)
-		if prefix == "" {
-			//TODO: split into optional interface
-			result, err = c.currentScene.Execute(rawInput)
-			if err != nil {
-				// TODO: implement error handling/output via cleanOutput
-				fmt.Println(err)
-				continue
-			}
+
+		rawInput := c.GetInput()
+		preprocessor, inputIsCommand := parser.SelectPreprocessorByPrefix(rawInput)
+		if inputIsCommand {
+			cmd, rawArgs := preprocessor(rawInput)
+			result, err = c.handleCommand(cmd, rawArgs)
+
 		} else {
-			cmd, rawArgs := extractCommandString(rawInput)
-			if _, exists := c.CommandRegistry[cmd]; !exists {
-				fmt.Printf("unknown command %q: %q", cmd, core.ErrNotACommand)
-			} else {
-				result, err = c.Execute(c.CommandRegistry[cmd], rawArgs)
-				if err != nil {
-					// TODO: implement error handling/output via cleanOutput
-					fmt.Println(err)
-					continue
-				}
-			}
+			result, err = c.handleRawInput(rawInput)
+		}
+		if err != nil {
+			fmt.Println(err)
 		}
 
-		if result.NextScene != c.CurrentScene() {
+		if result.NextScene != nil && result.NextScene != c.CurrentScene() {
 			fmt.Printf("Entering %s:\n", result.NextScene.GetName())
 			c.currentScene = result.NextScene
-			continue
+		} else {
+			fmt.Println(result.Response)
 		}
-
-		fmt.Println(result.Response)
 	}
 }
 
-func preprocess(prefix, rawInput string) (cmd string, args string)
+func (c *Cli) handleRawInput(rawInput string) (core.Result, error) {
+	var err error
+	result := core.Result{}
 
-func extractCommandString(rawInput string) (cmd string, args string) {
-	parts := strings.SplitN(rawInput, " ", 2)
-
-	cmd = parts[0]
-	if len(parts) >= 2 {
-		args = parts[1]
+	if scene, ok := c.CurrentScene().(core.AllowsRawInput); ok {
+		result, err = scene.HandleRawInput(rawInput)
+		if err != nil {
+			err = fmt.Errorf("handling input failed with error: %w", err)
+		}
+	} else {
+		err = fmt.Errorf("please enter a valid command")
 	}
 
-	return cmd, args
+	return result, err
 }
 
-func parse(rawArgs string) (args []string) {
-	if rawArgs == "" {
-		return args
+func (c *Cli) handleCommand(cmd, rawArgs string) (core.Result, error) {
+	var err error
+	result := core.Result{}
+
+	if _, exists := c.CommandRegistry[cmd]; !exists {
+		err = fmt.Errorf("unknown command %q: %w", cmd, core.ErrNotACommand)
+	} else {
+		result, err = c.Execute(c.CommandRegistry[cmd], rawArgs)
 	}
-	return strings.Split(rawArgs, " ")
+
+	return result, err
 }
 
 func getRegistry() map[string]core.Command {
 	registry := make(map[string]core.Command)
-	for _, cmd := range (&commands.Library{}).GetAll() {
+	for _, cmd := range commands.All() {
 		registry[cmd.Name()] = cmd
 	}
 	return registry

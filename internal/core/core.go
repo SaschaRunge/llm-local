@@ -17,12 +17,16 @@ type CommandContext struct {
 	Runtime Runtime
 }
 
+type AllowsRawInput interface {
+	HandleRawInput(rawInput string) (Result, error)
+}
+
 type Command interface {
 	Name() string
 	Description() string
 	Usage() string
-	MinAmountArguments() int
-	MaxAmountArguments() int
+	MinArguments() int
+	MaxArguments() int
 
 	CanExecute(commandCtx CommandContext) bool
 	Execute(commandCtx CommandContext) (Result, error)
@@ -40,6 +44,5 @@ type Runtime interface {
 
 type Scene interface {
 	GetName() string
-	Execute(rawInput string) (Result, error)
 	OnEnter() string
 }

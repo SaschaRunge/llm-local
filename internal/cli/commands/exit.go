@@ -13,9 +13,9 @@ func (l *Exit) Name() string { return "/exit" }
 func (l *Exit) Description() string {
 	return "Exits the program."
 }
-func (l *Exit) Usage() string           { return fmt.Sprintf("%s", l.Name()) }
-func (l *Exit) MinAmountArguments() int { return 0 }
-func (l *Exit) MaxAmountArguments() int { return 0 }
+func (l *Exit) Usage() string     { return fmt.Sprintf("%s", l.Name()) }
+func (l *Exit) MinArguments() int { return 0 }
+func (l *Exit) MaxArguments() int { return 0 }
 
 func (l *Exit) CanExecute(commandCtx core.CommandContext) bool {
 	return true

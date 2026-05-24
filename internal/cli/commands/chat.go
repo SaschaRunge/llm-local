@@ -13,9 +13,9 @@ func (c *Chat) Name() string { return "/chat" }
 func (c *Chat) Description() string {
 	return "Starts the chat interface. Will load or create the chat [chat_name]."
 }
-func (c *Chat) Usage() string           { return fmt.Sprintf("%s [chat_name]", c.Name()) }
-func (c *Chat) MinAmountArguments() int { return 1 }
-func (c *Chat) MaxAmountArguments() int { return 1 }
+func (c *Chat) Usage() string     { return fmt.Sprintf("%s [chat_name]", c.Name()) }
+func (c *Chat) MinArguments() int { return 1 }
+func (c *Chat) MaxArguments() int { return 1 }
 
 func (c *Chat) CanExecute(commandCtx core.CommandContext) bool {
 	return true

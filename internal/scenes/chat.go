@@ -70,14 +70,14 @@ func (c *Chat) GetName() string {
 
 func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 	return core.Result{
-		Response:  "",
+		Response:  name,
 		NextScene: c,
 	}, nil
 }
 
 // TODO: need to add id/authorID to cached Messages after commiting to DB
 // instead append to history at the end
-func (c *Chat) Execute(userInput string) (core.Result, error) {
+func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 	history := append([]cachedMessage{}, c.cachedMessages...)
 	message := cachedMessage{
 		Message: communication.Message{

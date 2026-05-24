@@ -6,10 +6,13 @@ import (
 
 type preprocessor func(string) (string, string)
 
-func Default(rawInput string)
+var preprocessors = map[string]preprocessor{
+	"/": preprocessSlash,
+	"@": createMentionPreprocessor("@"),
+}
 
 func SelectPreprocessorByPrefix(rawInput string) (pp preprocessor, ok bool) {
-	for prefix, pp := range preprocessors() {
+	for prefix, pp := range preprocessors {
 		if strings.HasPrefix(rawInput, prefix) {
 			return pp, true
 		}
@@ -17,10 +20,10 @@ func SelectPreprocessorByPrefix(rawInput string) (pp preprocessor, ok bool) {
 	return nil, false
 }
 
-func preprocessors() map[string]preprocessor {
-	return map[string]preprocessor{
-		"/": preprocessSlash,
-		"@": preprocessMention,
+func createMentionPreprocessor(prefix string) preprocessor {
+	return func(rawInput string) (cmd string, rawArgs string) {
+		rawArgs = strings.TrimPrefix(rawInput, prefix)
+		return prefix, rawArgs
 	}
 }
 
@@ -28,18 +31,6 @@ func preprocessSlash(rawInput string) (cmd string, rawArgs string) {
 	parts := strings.SplitN(rawInput, " ", 2)
 
 	cmd = parts[0]
-	if len(parts) >= 2 {
-		rawArgs = parts[1]
-	}
-
-	return cmd, rawArgs
-}
-
-func preprocessMention(rawInput string) (cmd string, rawArgs string) {
-	cmd = "@"
-
-	//fix, throws name outa window
-	parts := strings.SplitN(rawInput, " ", 2)
 	if len(parts) >= 2 {
 		rawArgs = parts[1]
 	}

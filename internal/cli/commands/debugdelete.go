@@ -12,9 +12,9 @@ func (d *DebugDelete) Name() string { return "/debugdelete" }
 func (d *DebugDelete) Description() string {
 	return "Deletes the current chat's history."
 }
-func (d *DebugDelete) Usage() string           { return fmt.Sprintf("%s", d.Name()) }
-func (d *DebugDelete) MinAmountArguments() int { return 0 }
-func (d *DebugDelete) MaxAmountArguments() int { return 0 }
+func (d *DebugDelete) Usage() string     { return fmt.Sprintf("%s", d.Name()) }
+func (d *DebugDelete) MinArguments() int { return 0 }
+func (d *DebugDelete) MaxArguments() int { return 0 }
 
 func (c *DebugDelete) CanExecute(commandCtx core.CommandContext) bool {
 	return true
