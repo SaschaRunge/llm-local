@@ -43,7 +43,7 @@ func (c *Client) load(model string) error {
 func (c *Client) GenerateAnswer(ctx context.Context, messageHistory []communication.Message) (string, error) {
 	anyllmMessageHistory, err := translateHistory(messageHistory)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	response, err := c.provider.Completion(ctx, anyllm.CompletionParams{

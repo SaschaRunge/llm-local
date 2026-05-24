@@ -20,8 +20,8 @@ const (
 
 type Chat struct {
 	cachedMessages []cachedMessage
-	characters     []Character
-	userCharacter  Character
+	characters     []character
+	userCharacter  character
 	ID             uuid.UUID
 	Name           string
 	scenario       string
@@ -36,7 +36,7 @@ type cachedMessage struct {
 	communication.Message
 }
 
-type Character = database.GetCharactersInChatRow
+type character = database.GetCharactersInChatRow
 
 func NewSceneChat(runtime core.Runtime, chat database.Chat) (*Chat, error) {
 	sceneChat := Chat{
@@ -65,21 +65,27 @@ func (c *Chat) OnEnter() string {
 }
 
 func (c *Chat) GetName() string {
-	return "Chat"
+	return fmt.Sprintf("%s", c.Name)
 }
 
 func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
-	return core.Result{
-		Response:  name,
-		NextScene: c,
-	}, nil
-}
+	var currentCharacter character
+	for _, char := range c.characters {
+		if char.Name == name {
+			currentCharacter = char
+			break
+		}
+	}
 
-// TODO: need to add id/authorID to cached Messages after commiting to DB
-// instead append to history at the end
-func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
+	if currentCharacter.Name == "" {
+		return core.Result{}, fmt.Errorf("character %q not found in chat %q", name, c.GetName())
+	}
+
+	authorsNote := fmt.Sprintf("\n\n[SYSTEM: Respond strictly as %q for this turn. Maintain their tone and knowledge.]", currentCharacter.Name)
+
 	history := append([]cachedMessage{}, c.cachedMessages...)
-	message := cachedMessage{
+	userMessage := cachedMessage{
+		authorID: c.userCharacter.ID,
 		Message: communication.Message{
 			Name:      c.userCharacter.Name,
 			Role:      communication.RoleUser,
@@ -87,20 +93,21 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 			Content:   userInput,
 		},
 	}
+	alteredMessage := userMessage
+	alteredMessage.Content = alteredMessage.Content + authorsNote
 
-	history = append(history, message)
+	history = append(history, alteredMessage)
 
 	ctx, cancel := context.WithTimeout(c.runtime.Context(), generateAnswerTimeoutInSeconds*time.Second)
 	defer cancel()
+
 	response, err := c.llmClient.GenerateAnswer(ctx, asComMessages(history))
 	if err != nil {
-		return core.Result{
-			Response:  "",
-			NextScene: c,
-		}, err
+		return core.Result{}, err
 	}
 
-	answer := cachedMessage{
+	assistantMessage := cachedMessage{
+		authorID: currentCharacter.ID,
 		Message: communication.Message{
 			Name:      c.characters[0].Name,
 			Role:      communication.RoleAssistant,
@@ -109,57 +116,100 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 		},
 	}
 
+	err = c.archiveCurrentTurn(userMessage, assistantMessage)
+	if err != nil {
+		return core.Result{}, err
+	}
+
+	return core.Result{
+		Response:  response + "\n",
+		NextScene: c,
+	}, nil
+}
+
+// TODO: need to add id/authorID to cached Messages after commiting to DB
+// instead append to history at the end
+func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
+	history := append([]cachedMessage{}, c.cachedMessages...)
+	userMessage := cachedMessage{
+		authorID: c.userCharacter.ID,
+		Message: communication.Message{
+			Name:      c.userCharacter.Name,
+			Role:      communication.RoleUser,
+			Reasoning: "",
+			Content:   userInput,
+		},
+	}
+
+	history = append(history, userMessage)
+
+	ctx, cancel := context.WithTimeout(c.runtime.Context(), generateAnswerTimeoutInSeconds*time.Second)
+	defer cancel()
+	response, err := c.llmClient.GenerateAnswer(ctx, asComMessages(history))
+	if err != nil {
+		return core.Result{}, err
+	}
+
+	assistantMessage := cachedMessage{
+		//TODO: need to specify which character is talking
+		authorID: c.characters[0].ID,
+		Message: communication.Message{
+			Name:      c.characters[0].Name,
+			Role:      communication.RoleAssistant,
+			Reasoning: "",
+			Content:   response,
+		},
+	}
+
+	err = c.archiveCurrentTurn(userMessage, assistantMessage)
+	if err != nil {
+		return core.Result{}, err
+	}
+
+	return core.Result{
+		Response:  response + "\n",
+		NextScene: c,
+	}, nil
+}
+
+func (c *Chat) archiveCurrentTurn(userMessage, assistantMessage cachedMessage) error {
 	//TODO: rollback entire commit if send fails on either Add
-	messageInDB, err := c.runtime.DB().AddMessage(c.runtime.Context(), database.AddMessageParams{
+	userMessageInDB, err := c.runtime.DB().AddMessage(c.runtime.Context(), database.AddMessageParams{
 		Reasoning: sql.NullString{},
-		Content:   message.Content,
+		Content:   userMessage.Content,
 		ChatID:    c.ID,
 		AuthorID:  c.userCharacter.ID,
-		Role:      string(message.Role),
+		Role:      string(userMessage.Role),
 	})
 	if err != nil {
-		return core.Result{
-			Response:  "",
-			NextScene: c,
-		}, err
+		return err
 	}
 
 	//TODO: currently answers just as the first character in the character list
-	answerInDB, err := c.runtime.DB().AddMessage(c.runtime.Context(), database.AddMessageParams{
+	assistantMessageInDB, err := c.runtime.DB().AddMessage(c.runtime.Context(), database.AddMessageParams{
 		Reasoning: sql.NullString{},
-		Content:   answer.Content,
+		Content:   assistantMessage.Content,
 		ChatID:    c.ID,
-		AuthorID:  c.characters[0].ID,
-		Role:      string(answer.Role),
+		AuthorID:  assistantMessage.authorID,
+		Role:      string(assistantMessage.Role),
 	})
 	if err != nil {
-		return core.Result{
-			Response:  "",
-			NextScene: c,
-		}, err
+		return err
 	}
 
-	message.id = messageInDB.ID
-	message.authorID = messageInDB.AuthorID
-	answer.id = answerInDB.ID
-	answer.authorID = answerInDB.AuthorID
+	userMessage.id = userMessageInDB.ID
+	assistantMessage.id = assistantMessageInDB.ID
 
-	c.cachedMessages = append(c.cachedMessages, message, answer)
+	c.cachedMessages = append(c.cachedMessages, userMessage, assistantMessage)
 
-	return core.Result{
-		Response:  response,
-		NextScene: c,
-	}, nil
+	return nil
 }
 
 func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 	history := append([]cachedMessage{}, c.cachedMessages...)
 
 	if len(history) == 0 {
-		return core.Result{
-			Response:  "",
-			NextScene: c,
-		}, fmt.Errorf("no chat history, nothing to regenerate")
+		return core.Result{}, fmt.Errorf("no chat history, nothing to regenerate")
 	}
 
 	lastMessage := history[len(history)-1]
@@ -181,10 +231,7 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 	defer cancel()
 	response, err := c.llmClient.GenerateAnswer(ctxResponse, asComMessages(history))
 	if err != nil {
-		return core.Result{
-			Response:  "",
-			NextScene: c,
-		}, err
+		return core.Result{}, err
 	}
 
 	answer := cachedMessage{
@@ -207,10 +254,7 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 		Content:   answer.Content,
 	})
 	if err != nil {
-		return core.Result{
-			Response:  "",
-			NextScene: c,
-		}, err
+		return core.Result{}, err
 	}
 
 	c.cachedMessages[len(history)-1] = answer
@@ -276,8 +320,8 @@ func asComMessages(messages []cachedMessage) []communication.Message {
 	return comMessages
 }
 
-func mapFromDBUserCharacter(userCharacter database.GetUserCharacterInChatByIDRow) Character {
-	return Character{
+func mapFromDBUserCharacter(userCharacter database.GetUserCharacterInChatByIDRow) character {
+	return character{
 		ID:           userCharacter.ID,
 		Name:         userCharacter.Name,
 		SystemPrompt: userCharacter.SystemPrompt,
