@@ -24,7 +24,7 @@ type Chat struct {
 	userCharacter  character
 	ID             uuid.UUID
 	Name           string
-	scenario       string
+	card           string
 
 	runtime   core.Runtime
 	llmClient *llm.Client
@@ -293,11 +293,11 @@ func (c *Chat) loadData() error {
 	}
 	c.userCharacter = mapFromDBUserCharacter(userCharacter)
 
-	scenario, err := db.GetScenarioFromChatByID(ctx, c.ID)
+	card, err := db.GetCardFromChatByID(ctx, c.ID)
 	if err != nil {
 		return err
 	}
-	c.scenario = scenario.String
+	c.card = card.String
 
 	for _, message := range messages {
 		role := communication.Role(message.Role)

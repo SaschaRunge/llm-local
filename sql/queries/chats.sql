@@ -27,6 +27,6 @@ WHERE characters.id = (
     WHERE chats.id = $1
 );
 
--- name: GetScenarioFromChatByID :one
-SELECT scenario FROM chats
+-- name: GetCardFromChatByID :one
+SELECT card FROM chats
 WHERE chats.id = $1;

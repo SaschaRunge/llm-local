@@ -29,7 +29,7 @@ type Chat struct {
 	DeletedAt       sql.NullTime
 	Name            string
 	UserCharacterID uuid.NullUUID
-	Scenario        sql.NullString
+	Card            sql.NullString
 }
 
 type ChatSubscription struct {

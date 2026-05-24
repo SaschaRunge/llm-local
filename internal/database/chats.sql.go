@@ -20,7 +20,7 @@ VALUES(
     NOW(),
     $1
 )
-RETURNING id, created_at, updated_at, deleted_at, name, user_character_id, scenario
+RETURNING id, created_at, updated_at, deleted_at, name, user_character_id, card
 `
 
 func (q *Queries) AddChat(ctx context.Context, name string) (Chat, error) {
@@ -33,13 +33,13 @@ func (q *Queries) AddChat(ctx context.Context, name string) (Chat, error) {
 		&i.DeletedAt,
 		&i.Name,
 		&i.UserCharacterID,
-		&i.Scenario,
+		&i.Card,
 	)
 	return i, err
 }
 
 const getAllChats = `-- name: GetAllChats :many
-SELECT id, created_at, updated_at, deleted_at, name, user_character_id, scenario FROM chats
+SELECT id, created_at, updated_at, deleted_at, name, user_character_id, card FROM chats
 `
 
 func (q *Queries) GetAllChats(ctx context.Context) ([]Chat, error) {
@@ -58,7 +58,7 @@ func (q *Queries) GetAllChats(ctx context.Context) ([]Chat, error) {
 			&i.DeletedAt,
 			&i.Name,
 			&i.UserCharacterID,
-			&i.Scenario,
+			&i.Card,
 		); err != nil {
 			return nil, err
 		}
@@ -73,8 +73,20 @@ func (q *Queries) GetAllChats(ctx context.Context) ([]Chat, error) {
 	return items, nil
 }
 
+const getCardFromChatByID = `-- name: GetCardFromChatByID :one
+SELECT card FROM chats
+WHERE chats.id = $1
+`
+
+func (q *Queries) GetCardFromChatByID(ctx context.Context, id uuid.UUID) (sql.NullString, error) {
+	row := q.db.QueryRowContext(ctx, getCardFromChatByID, id)
+	var card sql.NullString
+	err := row.Scan(&card)
+	return card, err
+}
+
 const getChatByID = `-- name: GetChatByID :one
-SELECT id, created_at, updated_at, deleted_at, name, user_character_id, scenario FROM chats
+SELECT id, created_at, updated_at, deleted_at, name, user_character_id, card FROM chats
 WHERE id = $1
 `
 
@@ -88,13 +100,13 @@ func (q *Queries) GetChatByID(ctx context.Context, id uuid.UUID) (Chat, error) {
 		&i.DeletedAt,
 		&i.Name,
 		&i.UserCharacterID,
-		&i.Scenario,
+		&i.Card,
 	)
 	return i, err
 }
 
 const getChatsLikeName = `-- name: GetChatsLikeName :many
-SELECT id, created_at, updated_at, deleted_at, name, user_character_id, scenario FROM chats
+SELECT id, created_at, updated_at, deleted_at, name, user_character_id, card FROM chats
 WHERE name LIKE $1
 `
 
@@ -114,7 +126,7 @@ func (q *Queries) GetChatsLikeName(ctx context.Context, name string) ([]Chat, er
 			&i.DeletedAt,
 			&i.Name,
 			&i.UserCharacterID,
-			&i.Scenario,
+			&i.Card,
 		); err != nil {
 			return nil, err
 		}
@@ -127,18 +139,6 @@ func (q *Queries) GetChatsLikeName(ctx context.Context, name string) ([]Chat, er
 		return nil, err
 	}
 	return items, nil
-}
-
-const getScenarioFromChatByID = `-- name: GetScenarioFromChatByID :one
-SELECT scenario FROM chats
-WHERE chats.id = $1
-`
-
-func (q *Queries) GetScenarioFromChatByID(ctx context.Context, id uuid.UUID) (sql.NullString, error) {
-	row := q.db.QueryRowContext(ctx, getScenarioFromChatByID, id)
-	var scenario sql.NullString
-	err := row.Scan(&scenario)
-	return scenario, err
 }
 
 const getUserCharacterInChatByID = `-- name: GetUserCharacterInChatByID :one
