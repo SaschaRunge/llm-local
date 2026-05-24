@@ -13,6 +13,7 @@ func All() []core.Command {
 		&debugDelete{},
 		&exit{},
 		&lobby{},
+		&new{},
 		&regenerate{},
 	}
 }

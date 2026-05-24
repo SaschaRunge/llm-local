@@ -1,10 +1,11 @@
 -- name: AddChat :one
-INSERT INTO chats(id, created_at, updated_at, name)
+INSERT INTO chats(id, created_at, updated_at, name, user_character_id)
 VALUES(
     gen_random_uuid(),
     NOW(),
     NOW(),
-    $1
+    $1,
+    $2
 )
 RETURNING *;
 

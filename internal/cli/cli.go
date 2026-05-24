@@ -103,12 +103,11 @@ func (c *Cli) Run() error {
 		if inputIsCommand {
 			cmd, rawArgs := preprocessor(rawInput)
 			result, err = c.handleCommand(cmd, rawArgs)
-
 		} else {
 			result, err = c.handleRawInput(rawInput)
 		}
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("unable to process input, error: %q", err)
 		}
 
 		if result.NextScene != nil && result.NextScene != c.CurrentScene() {
@@ -119,6 +118,14 @@ func (c *Cli) Run() error {
 		}
 	}
 }
+
+/* //TODO: do something on enter/exit
+func (c *Cli) sceneChange(nextScene core.Scene) {
+	nextScene.OnEnter()
+	c.currentScene.OnExit()
+	c.currentScene = nextScene
+}
+*/
 
 func (c *Cli) handleRawInput(rawInput string) (core.Result, error) {
 	var err error

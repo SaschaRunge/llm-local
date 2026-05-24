@@ -17,17 +17,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-/*
-type mockScene struct {
-}
-
-func (s *mockScene) Execute(string) (core.SceneResult, error) {
-	return core.SceneResult{}, nil
-}
-
-func (c *mockScene) GetName() string {
-	return "mockScene"
-}*/
+var DefaultUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
 
 type mockRuntime struct {
 	db      *database.Queries
@@ -149,7 +139,10 @@ func setupChat(t *testing.T, chatNames, characterNames []string) *database.Queri
 	err := errors.New("")
 
 	for i, cn := range chatNames {
-		chats[i], err = dbQueries.AddChat(context.Background(), cn)
+		chats[i], err = dbQueries.AddChat(context.Background(), database.AddChatParams{
+			Name:            cn,
+			UserCharacterID: DefaultUserID,
+		})
 		if err != nil {
 			t.Fatalf("setup: failed to add chat %q: %v", cn, err)
 		}

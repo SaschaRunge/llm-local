@@ -28,7 +28,7 @@ type Chat struct {
 	UpdatedAt       time.Time
 	DeletedAt       sql.NullTime
 	Name            string
-	UserCharacterID uuid.NullUUID
+	UserCharacterID uuid.UUID
 	Card            sql.NullString
 }
 

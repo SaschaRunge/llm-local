@@ -13,18 +13,24 @@ import (
 )
 
 const addChat = `-- name: AddChat :one
-INSERT INTO chats(id, created_at, updated_at, name)
+INSERT INTO chats(id, created_at, updated_at, name, user_character_id)
 VALUES(
     gen_random_uuid(),
     NOW(),
     NOW(),
-    $1
+    $1,
+    $2
 )
 RETURNING id, created_at, updated_at, deleted_at, name, user_character_id, card
 `
 
-func (q *Queries) AddChat(ctx context.Context, name string) (Chat, error) {
-	row := q.db.QueryRowContext(ctx, addChat, name)
+type AddChatParams struct {
+	Name            string
+	UserCharacterID uuid.UUID
+}
+
+func (q *Queries) AddChat(ctx context.Context, arg AddChatParams) (Chat, error) {
+	row := q.db.QueryRowContext(ctx, addChat, arg.Name, arg.UserCharacterID)
 	var i Chat
 	err := row.Scan(
 		&i.ID,
