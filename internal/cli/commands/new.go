@@ -1,10 +1,12 @@
 package commands
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/SaschaRunge/llm-local/internal/core"
 	"github.com/SaschaRunge/llm-local/internal/database"
+	"github.com/SaschaRunge/llm-local/internal/scenes"
 
 	"github.com/google/uuid"
 )
@@ -55,14 +57,24 @@ func optionChat(commandCtx core.CommandContext) (core.Result, error) {
 }
 
 func optionCharacter(commandCtx core.CommandContext) (core.Result, error) {
-	/*
+	newCharacter, err := commandCtx.Runtime.DB().AddCharacter(commandCtx.Runtime.Context(), database.AddCharacterParams{
+		Name: commandCtx.Args[1],
+		Card: sql.NullString{},
+		//TODO: allow for creation of user character. maybe own option user
+		IsUser: sql.NullBool{},
+	})
+	if err != nil {
+		return core.Result{}, err
+	}
 
-		switch scene := commandCtx.Runtime.CurrentScene().(type){
-		case *scenes.Chat:
-			commandCtx.Runtime.DB().SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
-
-			})
-			scene.ID
-		}*/
-	return core.Result{}, nil
+	switch currentScene := commandCtx.Runtime.CurrentScene().(type) {
+	case *scenes.Chat:
+		commandCtx.Runtime.DB().SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
+			ChatID:      currentScene.ID,
+			CharacterID: newCharacter.ID,
+		})
+		return core.Result{Response: fmt.Sprintf("Character %q successfully created and subscribed to Chat %q.", newCharacter.Name, currentScene.GetName())}, nil
+	default:
+		return core.Result{Response: fmt.Sprintf("Character %q successfully created.", newCharacter.Name)}, nil
+	}
 }
