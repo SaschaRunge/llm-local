@@ -3,6 +3,7 @@ package commands
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/SaschaRunge/llm-local/internal/core"
 	"github.com/SaschaRunge/llm-local/internal/database"
@@ -44,9 +45,14 @@ func (n *new) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	return executeOption(commandCtx)
 }
 
+func (n *new) ParseArgs(rawArgs string) []string {
+	parts := strings.SplitN(rawArgs, " ", 2)
+	return parts
+}
+
 func optionChat(commandCtx core.CommandContext) (core.Result, error) {
 	newChat, err := commandCtx.Runtime.DB().AddChat(commandCtx.Runtime.Context(), database.AddChatParams{
-		Name:            commandCtx.Args[1],
+		Name:            strings.TrimSpace(commandCtx.Args[1]),
 		UserCharacterID: DefaultUserID,
 	})
 	if err != nil {
@@ -58,10 +64,10 @@ func optionChat(commandCtx core.CommandContext) (core.Result, error) {
 
 func optionCharacter(commandCtx core.CommandContext) (core.Result, error) {
 	newCharacter, err := commandCtx.Runtime.DB().AddCharacter(commandCtx.Runtime.Context(), database.AddCharacterParams{
-		Name: commandCtx.Args[1],
+		Name: strings.TrimSpace(commandCtx.Args[1]),
 		Card: sql.NullString{},
 		//TODO: allow for creation of user character. maybe own option user
-		IsUser: sql.NullBool{},
+		IsUser: sql.NullBool{Bool: false, Valid: true},
 	})
 	if err != nil {
 		return core.Result{}, err
@@ -69,10 +75,14 @@ func optionCharacter(commandCtx core.CommandContext) (core.Result, error) {
 
 	switch currentScene := commandCtx.Runtime.CurrentScene().(type) {
 	case *scenes.Chat:
-		commandCtx.Runtime.DB().SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
+		err := commandCtx.Runtime.DB().SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
 			ChatID:      currentScene.ID,
 			CharacterID: newCharacter.ID,
 		})
+		if err != nil {
+			return core.Result{}, err
+		}
+
 		return core.Result{Response: fmt.Sprintf("Character %q successfully created and subscribed to Chat %q.", newCharacter.Name, currentScene.GetName())}, nil
 	default:
 		return core.Result{Response: fmt.Sprintf("Character %q successfully created.", newCharacter.Name)}, nil
