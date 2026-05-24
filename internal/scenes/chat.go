@@ -38,6 +38,13 @@ type cachedMessage struct {
 	communication.Message
 }
 
+type characterCard struct {
+	Name        string
+	Description string
+	Personality string
+	FirstMsg    string
+	MsgExample  string
+}
 type character = database.GetCharactersInChatRow
 
 func NewSceneChat(runtime core.Runtime, chat database.Chat) (*Chat, error) {
