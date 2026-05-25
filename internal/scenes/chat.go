@@ -322,7 +322,7 @@ func (c *Chat) loadData() error {
 		if !role.IsValid() {
 			return fmt.Errorf("message role %q is not a valid role", role)
 		}
-		cachedMessage := cachedMessage{
+		c.cachedMessages = append(c.cachedMessages, cachedMessage{
 			id:       message.ID,
 			authorID: message.AuthorID,
 			Message: communication.Message{
@@ -331,8 +331,7 @@ func (c *Chat) loadData() error {
 				Reasoning: message.Reasoning.String,
 				Content:   message.Content,
 			},
-		}
-		c.cachedMessages = append(c.cachedMessages, cachedMessage)
+		})
 	}
 
 	return nil
