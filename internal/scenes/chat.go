@@ -144,6 +144,10 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 // TODO: need to add id/authorID to cached Messages after commiting to DB
 // instead append to history at the end
 func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
+	if len(c.characters) == 0 {
+		return core.Result{}, fmt.Errorf("no character in current chat %q", c.GetName())
+	}
+
 	history := append([]cachedMessage{}, c.cachedMessages...)
 	userMessage := cachedMessage{
 		authorID: c.userCharacter.ID,
