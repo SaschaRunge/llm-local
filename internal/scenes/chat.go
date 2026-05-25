@@ -321,7 +321,7 @@ func (c *Chat) loadData() error {
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(card.RawMessage, &c.card)
+	err = json.Unmarshal(card, &c.card)
 	if err != nil {
 		return err
 	}
