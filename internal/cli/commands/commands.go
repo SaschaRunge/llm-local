@@ -6,7 +6,7 @@ import (
 
 func All() []core.Command {
 	return []core.Command{
-		//&add{},
+		&add{},
 		&atCharacter{},
 		&characters{},
 		&chats{},
