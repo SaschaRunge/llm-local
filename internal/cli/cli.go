@@ -107,7 +107,7 @@ func (c *Cli) Run() error {
 			result, err = c.handleRawInput(rawInput)
 		}
 		if err != nil {
-			fmt.Printf("unable to process input, error: %q", err)
+			fmt.Printf("unable to process input, error: %s", err)
 		}
 
 		if result.NextScene != nil && result.NextScene != c.CurrentScene() {
