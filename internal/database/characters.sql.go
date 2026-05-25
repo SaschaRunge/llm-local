@@ -51,8 +51,8 @@ func (q *Queries) AddCharacter(ctx context.Context, arg AddCharacterParams) (Cha
 const getAvailableCharacters = `-- name: GetAvailableCharacters :many
 SELECT id, name, card FROM characters
 WHERE
-    is_user = 0 AND
-    is_system = 0 AND
+    is_user = 'false' AND
+    is_system = 'false' AND
     deleted_at IS NULL
 `
 
@@ -119,7 +119,7 @@ const getUserCharactersLikeName = `-- name: GetUserCharactersLikeName :many
 SELECT id, name, card FROM characters 
 WHERE 
     name LIKE $1 AND
-    is_user = 1 AND
+    is_user = 'true' AND
     deleted_at IS NULL
 `
 
