@@ -14,5 +14,7 @@ characters.card
 FROM chat_subscriptions 
 INNER JOIN characters
     ON chat_subscriptions.character_id = characters.id
-WHERE chat_subscriptions.chat_id = $1;
+WHERE 
+    chat_subscriptions.chat_id = $1 AND
+    characters.deleted_at IS NULL;;
 

@@ -8,9 +8,9 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 
 	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
 )
 
 const addCharacter = `-- name: AddCharacter :one
@@ -28,7 +28,7 @@ RETURNING id, created_at, updated_at, deleted_at, name, card, is_user, is_system
 
 type AddCharacterParams struct {
 	Name   string
-	Card   pqtype.NullRawMessage
+	Card   json.RawMessage
 	IsUser sql.NullBool
 }
 
@@ -48,9 +48,48 @@ func (q *Queries) AddCharacter(ctx context.Context, arg AddCharacterParams) (Cha
 	return i, err
 }
 
+const getAvailableCharacters = `-- name: GetAvailableCharacters :many
+SELECT id, name, card FROM characters
+WHERE
+    is_user = 0 AND
+    is_system = 0 AND
+    deleted_at IS NULL
+`
+
+type GetAvailableCharactersRow struct {
+	ID   uuid.UUID
+	Name string
+	Card json.RawMessage
+}
+
+func (q *Queries) GetAvailableCharacters(ctx context.Context) ([]GetAvailableCharactersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAvailableCharacters)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAvailableCharactersRow
+	for rows.Next() {
+		var i GetAvailableCharactersRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Card); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCharactersLikeName = `-- name: GetCharactersLikeName :many
 SELECT id FROM characters 
-WHERE name LIKE $1
+WHERE 
+    name LIKE $1 AND
+    deleted_at IS NULL
 `
 
 func (q *Queries) GetCharactersLikeName(ctx context.Context, name string) ([]uuid.UUID, error) {
@@ -80,13 +119,14 @@ const getUserCharactersLikeName = `-- name: GetUserCharactersLikeName :many
 SELECT id, name, card FROM characters 
 WHERE 
     name LIKE $1 AND
-    is_user = 1
+    is_user = 1 AND
+    deleted_at IS NULL
 `
 
 type GetUserCharactersLikeNameRow struct {
 	ID   uuid.UUID
 	Name string
-	Card pqtype.NullRawMessage
+	Card json.RawMessage
 }
 
 func (q *Queries) GetUserCharactersLikeName(ctx context.Context, name string) ([]GetUserCharactersLikeNameRow, error) {

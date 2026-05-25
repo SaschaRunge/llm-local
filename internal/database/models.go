@@ -6,10 +6,10 @@ package database
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
 )
 
 type Character struct {
@@ -18,7 +18,7 @@ type Character struct {
 	UpdatedAt time.Time
 	DeletedAt sql.NullTime
 	Name      string
-	Card      pqtype.NullRawMessage
+	Card      json.RawMessage
 	IsUser    sql.NullBool
 	IsSystem  sql.NullBool
 }
@@ -30,7 +30,7 @@ type Chat struct {
 	DeletedAt       sql.NullTime
 	Name            string
 	UserCharacterID uuid.UUID
-	Card            pqtype.NullRawMessage
+	Card            json.RawMessage
 }
 
 type ChatSubscription struct {

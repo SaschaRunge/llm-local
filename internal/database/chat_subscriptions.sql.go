@@ -7,9 +7,9 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
 )
 
 const getCharactersInChat = `-- name: GetCharactersInChat :many
@@ -20,13 +20,15 @@ characters.card
 FROM chat_subscriptions 
 INNER JOIN characters
     ON chat_subscriptions.character_id = characters.id
-WHERE chat_subscriptions.chat_id = $1
+WHERE 
+    chat_subscriptions.chat_id = $1 AND
+    characters.deleted_at IS NULL
 `
 
 type GetCharactersInChatRow struct {
 	ID   uuid.UUID
 	Name string
-	Card pqtype.NullRawMessage
+	Card json.RawMessage
 }
 
 func (q *Queries) GetCharactersInChat(ctx context.Context, chatID uuid.UUID) ([]GetCharactersInChatRow, error) {
