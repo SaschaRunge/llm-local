@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/SaschaRunge/llm-local/internal/cli/formatters"
 	"github.com/SaschaRunge/llm-local/internal/core"
 	"github.com/SaschaRunge/llm-local/internal/scenes"
 )
@@ -35,12 +36,10 @@ func (c *characters) Execute(commandCtx core.CommandContext) (core.Result, error
 	}
 
 	var response strings.Builder
+	addListItem := formatters.ListBuilder(&response)
 
-	for i, char := range availableCharacters {
-		_, err := fmt.Fprintf(&response, "%d. %s\n", i+1, char)
-		if err != nil {
-			return core.Result{}, fmt.Errorf("unexpected error in command %q: %w", c.Name(), err)
-		}
+	for _, char := range availableCharacters {
+		addListItem(char.Name)
 	}
 
 	return core.Result{Response: fmt.Sprintf("The following characters are currently in chat %s:\n%s", chat.GetName(), response.String())}, nil

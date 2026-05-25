@@ -289,10 +289,10 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 	}, nil
 }
 
-func (c *Chat) GetAvailableCharacters() []string {
-	availableCharacters := []string{}
+func (c *Chat) GetAvailableCharacters() []character {
+	availableCharacters := []character{}
 	for _, char := range c.characters {
-		availableCharacters = append(availableCharacters, char.Name)
+		availableCharacters = append(availableCharacters, char)
 	}
 	return availableCharacters
 }
