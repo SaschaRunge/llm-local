@@ -11,8 +11,8 @@ import (
 const maxAttempts = 100
 const cancel = ":x"
 
-// Selector takes a list of items []T and a conversion function toString. Selector displays the contents of []T as described by toString and allows selection through the reader function.
-func Selector[T any](items []T, toString func(T) string, reader func() string) (selection T) {
+// Select takes a list of items []T and a conversion function toString. Select displays the contents of []T as described by toString and allows selection through the reader function.
+func Select[T any](items []T, toString func(T) string, reader func() string) (selection T) {
 	if len(items) == 0 {
 		return
 	}
@@ -23,6 +23,9 @@ func Selector[T any](items []T, toString func(T) string, reader func() string) (
 	var itemName string
 	for _, item := range items {
 		itemName = toString(item)
+		if itemName == "" {
+			itemName = "<name not found>"
+		}
 		addListItem(itemName)
 	}
 
