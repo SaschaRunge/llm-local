@@ -33,17 +33,6 @@ func (c *chats) Execute(commandCtx core.CommandContext) (core.Result, error) {
 		return core.Result{}, nil
 	}
 
-	/*
-		var response strings.Builder
-
-		for i, chat := range chats {
-			_, err := fmt.Fprintf(&response, "  %d. %s\n", i+1, chat.Name)
-			if err != nil {
-				return core.Result{}, fmt.Errorf("unexpected error in command %q: %w", c.Name(), err)
-			}
-		}
-	*/
-
 	var response strings.Builder
 	addListItem := formatters.ListBuilder(&response)
 
