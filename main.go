@@ -15,6 +15,7 @@ import (
 
 	"github.com/SaschaRunge/llm-local/internal/cli"
 	_ "github.com/SaschaRunge/llm-local/internal/cli"
+	"github.com/SaschaRunge/llm-local/internal/core"
 	"github.com/SaschaRunge/llm-local/internal/database"
 
 	_ "github.com/google/uuid"
@@ -44,7 +45,9 @@ func main() {
 
 	dbQueries := database.New(db)
 
-	ui := cli.New(dbQueries)
+	ui := cli.New(&core.Store{
+		DB:        db,
+		DBQueries: dbQueries})
 	ui.Run()
 
 	/*

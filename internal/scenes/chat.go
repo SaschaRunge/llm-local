@@ -193,7 +193,7 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 
 func (c *Chat) archiveCurrentTurn(userMessage, assistantMessage cachedMessage) error {
 	//TODO: rollback entire commit if send fails on either Add
-	userMessageInDB, err := c.runtime.DB().AddMessage(c.runtime.Context(), database.AddMessageParams{
+	userMessageInDB, err := c.runtime.Store().DBQueries.AddMessage(c.runtime.Context(), database.AddMessageParams{
 		Reasoning: sql.NullString{},
 		Content:   userMessage.Content,
 		ChatID:    c.ID,
@@ -205,7 +205,7 @@ func (c *Chat) archiveCurrentTurn(userMessage, assistantMessage cachedMessage) e
 	}
 
 	//TODO: currently answers just as the first character in the character list
-	assistantMessageInDB, err := c.runtime.DB().AddMessage(c.runtime.Context(), database.AddMessageParams{
+	assistantMessageInDB, err := c.runtime.Store().DBQueries.AddMessage(c.runtime.Context(), database.AddMessageParams{
 		Reasoning: sql.NullString{},
 		Content:   assistantMessage.Content,
 		ChatID:    c.ID,
@@ -269,10 +269,10 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 		},
 	}
 
-	db := c.runtime.DB()
+	dbQueries := c.runtime.Store().DBQueries
 	ctx := c.runtime.Context()
 
-	err = db.ReplaceMessage(ctx, database.ReplaceMessageParams{
+	err = dbQueries.ReplaceMessage(ctx, database.ReplaceMessageParams{
 		ID:        answer.id,
 		Reasoning: sql.NullString{},
 		Content:   answer.Content,
@@ -298,7 +298,7 @@ func (c *Chat) GetAvailableCharacters() []string {
 }
 
 func (c *Chat) loadData() error {
-	db := c.runtime.DB()
+	db := c.runtime.Store().DBQueries
 	ctx := c.runtime.Context()
 
 	messages, err := db.GetChatHistory(ctx, c.ID)

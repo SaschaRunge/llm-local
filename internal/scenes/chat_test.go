@@ -33,8 +33,8 @@ func (r *mockRuntime) CurrentScene() core.Scene {
 	return &Chat{}
 }
 
-func (r *mockRuntime) DB() *database.Queries {
-	return r.db
+func (r *mockRuntime) Store() *core.Store {
+	return &core.Store{}
 }
 
 func (r *mockRuntime) GetInput() string {

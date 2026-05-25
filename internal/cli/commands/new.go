@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SaschaRunge/llm-local/internal/cli/commands/selector"
 	"github.com/SaschaRunge/llm-local/internal/core"
 	"github.com/SaschaRunge/llm-local/internal/database"
 	"github.com/SaschaRunge/llm-local/internal/scenes"
@@ -55,24 +54,12 @@ func (c *new) ParseArgs(rawArgs string) []string {
 }
 
 func optionChat(commandCtx core.CommandContext) (core.Result, error) {
-	availableCharacters, err := commandCtx.Runtime.DB().GetAvailableCharacters(commandCtx.Runtime.Context())
+	selectedCharacter, err := selectCharacter(commandCtx)
 	if err != nil {
 		return core.Result{}, err
 	}
-	if len(availableCharacters) == 0 {
-		return core.Result{}, fmt.Errorf("no valid characters to attach to chat. create a character first")
-	}
 
-	selectedCharacter := selector.Select(
-		availableCharacters,
-		func(char character) string { return char.Name },
-		commandCtx.Runtime.GetInput)
-
-	if selectedCharacter.Name == "" {
-		return core.Result{}, nil
-	}
-
-	newChat, err := commandCtx.Runtime.DB().AddChat(commandCtx.Runtime.Context(), database.AddChatParams{
+	newChat, err := commandCtx.Runtime.Store().DBQueries.AddChat(commandCtx.Runtime.Context(), database.AddChatParams{
 		Name:            strings.TrimSpace(commandCtx.Args[1]),
 		UserCharacterID: DefaultUserID,
 	})
@@ -80,7 +67,7 @@ func optionChat(commandCtx core.CommandContext) (core.Result, error) {
 		return core.Result{}, err
 	}
 
-	err = commandCtx.Runtime.DB().SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
+	err = commandCtx.Runtime.Store().DBQueries.SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
 		ChatID:      newChat.ID,
 		CharacterID: selectedCharacter.ID,
 	})
@@ -96,9 +83,9 @@ func optionChat(commandCtx core.CommandContext) (core.Result, error) {
 }
 
 func optionCharacter(commandCtx core.CommandContext) (core.Result, error) {
-	newCharacter, err := commandCtx.Runtime.DB().AddCharacter(commandCtx.Runtime.Context(), database.AddCharacterParams{
+	newCharacter, err := commandCtx.Runtime.Store().DBQueries.AddCharacter(commandCtx.Runtime.Context(), database.AddCharacterParams{
 		Name: strings.TrimSpace(commandCtx.Args[1]),
-		Card: json.RawMessage{},
+		Card: json.RawMessage("{}"),
 		//TODO: allow for creation of user character. maybe own option user
 		IsUser: sql.NullBool{Bool: false, Valid: true},
 	})
@@ -108,7 +95,7 @@ func optionCharacter(commandCtx core.CommandContext) (core.Result, error) {
 
 	switch currentScene := commandCtx.Runtime.CurrentScene().(type) {
 	case *scenes.Chat:
-		err := commandCtx.Runtime.DB().SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
+		err := commandCtx.Runtime.Store().DBQueries.SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
 			ChatID:      currentScene.ID,
 			CharacterID: newCharacter.ID,
 		})

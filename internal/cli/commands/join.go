@@ -22,7 +22,7 @@ func (c *join) CanExecute(commandCtx core.CommandContext) bool {
 }
 
 func (c *join) Execute(commandCtx core.CommandContext) (core.Result, error) {
-	chats, err := commandCtx.Runtime.DB().GetChatsLikeName(commandCtx.Runtime.Context(), commandCtx.Args[0])
+	chats, err := commandCtx.Runtime.Store().DBQueries.GetChatsLikeName(commandCtx.Runtime.Context(), commandCtx.Args[0])
 	if err != nil {
 		return core.Result{}, err
 	}

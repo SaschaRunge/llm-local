@@ -2,19 +2,25 @@ package core
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/SaschaRunge/llm-local/internal/database"
 )
+
+type CommandContext struct {
+	Cmd     string
+	Args    []string
+	Runtime Runtime
+}
 
 type Result struct {
 	Response  string
 	NextScene Scene
 }
 
-type CommandContext struct {
-	Cmd     string
-	Args    []string
-	Runtime Runtime
+type Store struct {
+	DB        *sql.DB
+	DBQueries *database.Queries
 }
 
 type AllowsRawInput interface {
@@ -39,8 +45,8 @@ type CustomParser interface {
 type Runtime interface {
 	Context() context.Context
 	CurrentScene() Scene
-	DB() *database.Queries
 	GetInput() string
+	Store() *Store
 }
 
 type Scene interface {

@@ -9,7 +9,6 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/cli/commands"
 	"github.com/SaschaRunge/llm-local/internal/cli/parser"
 	"github.com/SaschaRunge/llm-local/internal/core"
-	"github.com/SaschaRunge/llm-local/internal/database"
 	"github.com/SaschaRunge/llm-local/internal/scenes"
 )
 
@@ -17,21 +16,21 @@ type Cli struct {
 	CommandRegistry map[string]core.Command
 	CommandAlias    CommandAlias
 	currentScene    core.Scene
-	dbQueries       *database.Queries
 	context         context.Context
 	scanner         *bufio.Scanner
+	store           *core.Store
 }
 
 type CommandAlias struct {
 	alias map[string][]string
 }
 
-func New(dbQueries *database.Queries) *Cli {
+func New(store *core.Store) *Cli {
 	return &Cli{
 		CommandRegistry: getRegistry(),
-		dbQueries:       dbQueries,
-		scanner:         bufio.NewScanner(os.Stdin),
 		context:         context.Background(),
+		scanner:         bufio.NewScanner(os.Stdin),
+		store:           store,
 		currentScene:    &scenes.Lobby{},
 	}
 }
@@ -46,8 +45,8 @@ func (c *Cli) CurrentScene() core.Scene {
 	return c.currentScene
 }
 
-func (c *Cli) DB() *database.Queries {
-	return c.dbQueries
+func (c *Cli) Store() *core.Store {
+	return c.store
 }
 
 func (c *Cli) GetInput() string {

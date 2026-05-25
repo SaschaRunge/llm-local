@@ -21,7 +21,7 @@ func (c *debugDelete) CanExecute(commandCtx core.CommandContext) bool {
 }
 
 func (c *debugDelete) Execute(commandCtx core.CommandContext) (core.Result, error) {
-	err := commandCtx.Runtime.DB().DeleteMessages(commandCtx.Runtime.Context())
+	err := commandCtx.Runtime.Store().DBQueries.DeleteMessages(commandCtx.Runtime.Context())
 	if err != nil {
 		return core.Result{}, err
 	}
