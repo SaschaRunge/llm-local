@@ -9,20 +9,20 @@ import (
 
 type regenerate struct{}
 
-func (r *regenerate) Name() string { return "/regenerate" }
-func (r *regenerate) Description() string {
+func (c *regenerate) Name() string { return "/regenerate" }
+func (c *regenerate) Description() string {
 	return "Regenerates message [id]."
 }
-func (r *regenerate) Usage() string     { return fmt.Sprintf("%s", r.Name()) }
-func (r *regenerate) MinArguments() int { return 1 }
-func (r *regenerate) MaxArguments() int { return 1 }
+func (c *regenerate) Usage() string     { return fmt.Sprintf("%s", c.Name()) }
+func (c *regenerate) MinArguments() int { return 1 }
+func (c *regenerate) MaxArguments() int { return 1 }
 
-func (r *regenerate) CanExecute(commandCtx core.CommandContext) bool {
+func (c *regenerate) CanExecute(commandCtx core.CommandContext) bool {
 	_, isSceneChat := commandCtx.Runtime.CurrentScene().(*scenes.Chat)
 	return isSceneChat
 }
 
-func (r *regenerate) Execute(commandCtx core.CommandContext) (core.Result, error) {
+func (c *regenerate) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	chat, ok := commandCtx.Runtime.CurrentScene().(*scenes.Chat)
 	if !ok {
 		return core.Result{}, fmt.Errorf("unexpected error in command /regenerate: type assertion failed")
@@ -36,6 +36,6 @@ func (r *regenerate) Execute(commandCtx core.CommandContext) (core.Result, error
 	return result, err
 }
 
-func (r *regenerate) ParseArgs(rawArgs string) []string {
+func (c *regenerate) ParseArgs(rawArgs string) []string {
 	return []string{rawArgs}
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 type Character struct {
@@ -17,7 +18,7 @@ type Character struct {
 	UpdatedAt time.Time
 	DeletedAt sql.NullTime
 	Name      string
-	Card      sql.NullString
+	Card      pqtype.NullRawMessage
 	IsUser    sql.NullBool
 	IsSystem  sql.NullBool
 }
@@ -29,7 +30,7 @@ type Chat struct {
 	DeletedAt       sql.NullTime
 	Name            string
 	UserCharacterID uuid.UUID
-	Card            sql.NullString
+	Card            pqtype.NullRawMessage
 }
 
 type ChatSubscription struct {

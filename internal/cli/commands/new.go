@@ -10,6 +10,7 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/scenes"
 
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 var DefaultUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
@@ -23,29 +24,29 @@ var options = map[string]option{
 	"character": optionCharacter,
 }
 
-func (n *new) Name() string { return "/new" }
-func (n *new) Description() string {
+func (c *new) Name() string { return "/new" }
+func (c *new) Description() string {
 	return "Create a new chat or character"
 }
-func (n *new) Usage() string     { return fmt.Sprintf("%s [option] [name]", n.Name()) }
-func (n *new) MinArguments() int { return 2 }
-func (n *new) MaxArguments() int { return 2 }
+func (c *new) Usage() string     { return fmt.Sprintf("%s [option] [name]", c.Name()) }
+func (c *new) MinArguments() int { return 2 }
+func (c *new) MaxArguments() int { return 2 }
 
-func (n *new) CanExecute(commandCtx core.CommandContext) bool {
+func (c *new) CanExecute(commandCtx core.CommandContext) bool {
 	return true
 }
 
-func (n *new) Execute(commandCtx core.CommandContext) (core.Result, error) {
+func (c *new) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	optionArg := commandCtx.Args[0]
 	executeOption, ok := options[optionArg]
 	if !ok {
-		return core.Result{}, fmt.Errorf("%q is not a valid option for command %q. usage: %s", optionArg, n.Name(), n.Usage())
+		return core.Result{}, fmt.Errorf("%q is not a valid option for command %q. usage: %s", optionArg, c.Name(), c.Usage())
 	}
 
 	return executeOption(commandCtx)
 }
 
-func (n *new) ParseArgs(rawArgs string) []string {
+func (c *new) ParseArgs(rawArgs string) []string {
 	parts := strings.SplitN(rawArgs, " ", 2)
 	return parts
 }
@@ -65,7 +66,7 @@ func optionChat(commandCtx core.CommandContext) (core.Result, error) {
 func optionCharacter(commandCtx core.CommandContext) (core.Result, error) {
 	newCharacter, err := commandCtx.Runtime.DB().AddCharacter(commandCtx.Runtime.Context(), database.AddCharacterParams{
 		Name: strings.TrimSpace(commandCtx.Args[1]),
-		Card: sql.NullString{},
+		Card: pqtype.NullRawMessage{},
 		//TODO: allow for creation of user character. maybe own option user
 		IsUser: sql.NullBool{Bool: false, Valid: true},
 	})

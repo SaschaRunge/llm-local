@@ -7,9 +7,9 @@ package database
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 const getCharactersInChat = `-- name: GetCharactersInChat :many
@@ -26,7 +26,7 @@ WHERE chat_subscriptions.chat_id = $1
 type GetCharactersInChatRow struct {
 	ID   uuid.UUID
 	Name string
-	Card sql.NullString
+	Card pqtype.NullRawMessage
 }
 
 func (q *Queries) GetCharactersInChat(ctx context.Context, chatID uuid.UUID) ([]GetCharactersInChatRow, error) {

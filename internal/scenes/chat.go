@@ -3,7 +3,9 @@ package scenes
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/SaschaRunge/llm-local/internal/communication"
@@ -21,12 +23,13 @@ const (
 var SystemUserID = uuid.MustParse("00000000-0000-0000-0000-000000000000")
 
 type Chat struct {
+	card           card
+	userCharacter  character
 	cachedMessages []cachedMessage
 	characters     []character
-	userCharacter  character
-	ID             uuid.UUID
-	Name           string
-	card           string
+
+	ID   uuid.UUID
+	Name string
 
 	runtime   core.Runtime
 	llmClient *llm.Client
@@ -38,13 +41,14 @@ type cachedMessage struct {
 	communication.Message
 }
 
-type characterCard struct {
-	Name        string
-	Description string
-	Personality string
-	FirstMsg    string
-	MsgExample  string
+type card struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Personality string `json:"personality"`
+	FirstMsg    string `json:"first_msg"`
+	MsgExample  string `json:"msg_example"`
 }
+
 type character = database.GetCharactersInChatRow
 
 func NewSceneChat(runtime core.Runtime, chat database.Chat) (*Chat, error) {
@@ -306,7 +310,12 @@ func (c *Chat) loadData() error {
 	if err != nil {
 		return err
 	}
-	c.card = card.String
+	err = json.Unmarshal(card.RawMessage, &c.card)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("TEST JSON: %s", c.card.Description)
 
 	for _, message := range messages {
 		role := communication.Role(message.Role)
@@ -335,6 +344,15 @@ func asComMessages(messages []cachedMessage) []communication.Message {
 		comMessages = append(comMessages, message.Message)
 	}
 	return comMessages
+}
+
+func assembleSystemPrompt(card card) string {
+	var systemPrompt strings.Builder
+
+	fmt.Fprintf(&systemPrompt, "%s\n", llm.SystemPrompt)
+	fmt.Fprintf(&systemPrompt, "%s\n", card.Description)
+
+	return systemPrompt.String()
 }
 
 func mapFromDBUserCharacter(userCharacter database.GetUserCharacterInChatByIDRow) character {

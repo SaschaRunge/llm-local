@@ -7,9 +7,9 @@ package database
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 const addChat = `-- name: AddChat :one
@@ -84,9 +84,9 @@ SELECT card FROM chats
 WHERE chats.id = $1
 `
 
-func (q *Queries) GetCardFromChatByID(ctx context.Context, id uuid.UUID) (sql.NullString, error) {
+func (q *Queries) GetCardFromChatByID(ctx context.Context, id uuid.UUID) (pqtype.NullRawMessage, error) {
 	row := q.db.QueryRowContext(ctx, getCardFromChatByID, id)
-	var card sql.NullString
+	var card pqtype.NullRawMessage
 	err := row.Scan(&card)
 	return card, err
 }
@@ -159,7 +159,7 @@ WHERE characters.id = (
 type GetUserCharacterInChatByIDRow struct {
 	ID   uuid.UUID
 	Name string
-	Card sql.NullString
+	Card pqtype.NullRawMessage
 }
 
 func (q *Queries) GetUserCharacterInChatByID(ctx context.Context, id uuid.UUID) (GetUserCharacterInChatByIDRow, error) {

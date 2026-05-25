@@ -9,19 +9,19 @@ import (
 
 type exit struct{}
 
-func (e *exit) Name() string { return "/exit" }
-func (e *exit) Description() string {
+func (c *exit) Name() string { return "/exit" }
+func (c *exit) Description() string {
 	return "Exits the program."
 }
-func (e *exit) Usage() string     { return fmt.Sprintf("%s", e.Name()) }
-func (e *exit) MinArguments() int { return 0 }
-func (e *exit) MaxArguments() int { return 0 }
+func (c *exit) Usage() string     { return fmt.Sprintf("%s", c.Name()) }
+func (c *exit) MinArguments() int { return 0 }
+func (c *exit) MaxArguments() int { return 0 }
 
-func (e *exit) CanExecute(commandCtx core.CommandContext) bool {
+func (c *exit) CanExecute(commandCtx core.CommandContext) bool {
 	return true
 }
 
-func (e *exit) Execute(commandCtx core.CommandContext) (core.Result, error) {
+func (c *exit) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	fmt.Println("=== " + core.Goodbye + " ===")
 	os.Exit(0)
 

@@ -10,6 +10,7 @@ import (
 	"database/sql"
 
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 const addCharacter = `-- name: AddCharacter :one
@@ -27,7 +28,7 @@ RETURNING id, created_at, updated_at, deleted_at, name, card, is_user, is_system
 
 type AddCharacterParams struct {
 	Name   string
-	Card   sql.NullString
+	Card   pqtype.NullRawMessage
 	IsUser sql.NullBool
 }
 
@@ -85,7 +86,7 @@ WHERE
 type GetUserCharactersLikeNameRow struct {
 	ID   uuid.UUID
 	Name string
-	Card sql.NullString
+	Card pqtype.NullRawMessage
 }
 
 func (q *Queries) GetUserCharactersLikeName(ctx context.Context, name string) ([]GetUserCharactersLikeNameRow, error) {

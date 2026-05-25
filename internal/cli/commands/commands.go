@@ -8,7 +8,7 @@ func All() []core.Command {
 	return []core.Command{
 		&atCharacter{},
 		&characters{},
-		&chat{},
+		&join{},
 		&chats{},
 		&debugDelete{},
 		&exit{},
