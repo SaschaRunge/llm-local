@@ -55,6 +55,23 @@ func (c *new) ParseArgs(rawArgs string) []string {
 }
 
 func optionChat(commandCtx core.CommandContext) (core.Result, error) {
+	availableCharacters, err := commandCtx.Runtime.DB().GetAvailableCharacters(commandCtx.Runtime.Context())
+	if err != nil {
+		return core.Result{}, err
+	}
+	if len(availableCharacters) == 0 {
+		return core.Result{}, fmt.Errorf("no valid characters to attach to chat. create a character first")
+	}
+
+	selectedCharacter := selector.Select(
+		availableCharacters,
+		func(char character) string { return char.Name },
+		commandCtx.Runtime.GetInput)
+
+	if selectedCharacter.Name == "" {
+		return core.Result{}, nil
+	}
+
 	newChat, err := commandCtx.Runtime.DB().AddChat(commandCtx.Runtime.Context(), database.AddChatParams{
 		Name:            strings.TrimSpace(commandCtx.Args[1]),
 		UserCharacterID: DefaultUserID,
@@ -62,16 +79,6 @@ func optionChat(commandCtx core.CommandContext) (core.Result, error) {
 	if err != nil {
 		return core.Result{}, err
 	}
-
-	availableCharacters, err := commandCtx.Runtime.DB().GetAvailableCharacters(commandCtx.Runtime.Context())
-	if err != nil {
-		return core.Result{}, err
-	}
-
-	selectedCharacter := selector.Select(
-		availableCharacters,
-		func(char character) string { return char.Name },
-		commandCtx.Runtime.GetInput)
 
 	err = commandCtx.Runtime.DB().SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
 		ChatID:      newChat.ID,
