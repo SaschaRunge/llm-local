@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/SaschaRunge/llm-local/internal/cli/formatters"
 	"github.com/SaschaRunge/llm-local/internal/core"
 )
 
@@ -32,13 +33,22 @@ func (c *chats) Execute(commandCtx core.CommandContext) (core.Result, error) {
 		return core.Result{}, nil
 	}
 
-	var response strings.Builder
+	/*
+		var response strings.Builder
 
-	for i, chat := range chats {
-		_, err := fmt.Fprintf(&response, "  %d. %s\n", i+1, chat.Name)
-		if err != nil {
-			return core.Result{}, fmt.Errorf("unexpected error in command %q: %w", c.Name(), err)
+		for i, chat := range chats {
+			_, err := fmt.Fprintf(&response, "  %d. %s\n", i+1, chat.Name)
+			if err != nil {
+				return core.Result{}, fmt.Errorf("unexpected error in command %q: %w", c.Name(), err)
+			}
 		}
+	*/
+
+	var response strings.Builder
+	addListItem := formatters.ListBuilder(&response)
+
+	for _, chat := range chats {
+		addListItem(chat.Name)
 	}
 
 	return core.Result{Response: response.String()}, nil
