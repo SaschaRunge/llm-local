@@ -92,7 +92,7 @@ func (c *Cli) Execute(cmd core.Command, rawArgs string) (core.Result, error) {
 
 func (c *Cli) Run() error {
 	fmt.Println("=== " + core.Greeting + " ===")
-	fmt.Printf("Entering %s:\n", c.CurrentScene().GetName())
+	fmt.Printf("Entering %s:\n\n", c.CurrentScene().GetName())
 
 	for {
 		var result core.Result

@@ -20,6 +20,8 @@ func Select[T any](items []T, toString func(T) string, reader func() string) (se
 	var response strings.Builder
 	addListItem := formatters.ListBuilder(&response)
 
+	fmt.Printf("Please type the name or an index between 1 and %d. %s to cancel.\n", len(items), cancel)
+
 	var itemName string
 	for _, item := range items {
 		itemName = toString(item)
@@ -39,7 +41,6 @@ func Select[T any](items []T, toString func(T) string, reader func() string) (se
 			return
 		}
 
-		fmt.Printf("Please type the name or an index between 1 and %d. %s to cancel.\n", len(items), cancel)
 		input := strings.TrimSpace(reader())
 		index, err := strconv.Atoi(input)
 		if err != nil {

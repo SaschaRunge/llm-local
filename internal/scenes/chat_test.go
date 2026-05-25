@@ -36,6 +36,11 @@ func (r *mockRuntime) CurrentScene() core.Scene {
 func (r *mockRuntime) DB() *database.Queries {
 	return r.db
 }
+
+func (r *mockRuntime) GetInput() string {
+	return ""
+}
+
 func (r *mockRuntime) Handle(input string) (core.Scene, error) {
 	if input == "/exit" {
 		return &Chat{}, nil
