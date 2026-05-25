@@ -7,7 +7,6 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.12.3
 	github.com/mozilla-ai/any-llm-go v0.9.0
-	github.com/sqlc-dev/pqtype v0.3.0
 )
 
 require (

@@ -40,6 +40,7 @@ type Runtime interface {
 	Context() context.Context
 	CurrentScene() Scene
 	DB() *database.Queries
+	GetInput() string
 }
 
 type Scene interface {

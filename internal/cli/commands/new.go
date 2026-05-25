@@ -2,15 +2,16 @@ package commands
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/SaschaRunge/llm-local/internal/cli/commands/selector"
 	"github.com/SaschaRunge/llm-local/internal/core"
 	"github.com/SaschaRunge/llm-local/internal/database"
 	"github.com/SaschaRunge/llm-local/internal/scenes"
 
 	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
 )
 
 var DefaultUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
@@ -18,6 +19,8 @@ var DefaultUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
 type new struct{}
 
 type option func(core.CommandContext) (core.Result, error)
+
+type character = database.GetAvailableCharactersRow
 
 var options = map[string]option{
 	"chat":      optionChat,
@@ -60,13 +63,35 @@ func optionChat(commandCtx core.CommandContext) (core.Result, error) {
 		return core.Result{}, err
 	}
 
-	return core.Result{Response: fmt.Sprintf("Chat %q successfully created.", newChat.Name)}, nil
+	availableCharacters, err := commandCtx.Runtime.DB().GetAvailableCharacters(commandCtx.Runtime.Context())
+	if err != nil {
+		return core.Result{}, err
+	}
+
+	selectedCharacter := selector.Select(
+		availableCharacters,
+		func(char character) string { return char.Name },
+		commandCtx.Runtime.GetInput)
+
+	err = commandCtx.Runtime.DB().SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
+		ChatID:      newChat.ID,
+		CharacterID: selectedCharacter.ID,
+	})
+	if err != nil {
+		return core.Result{}, err
+	}
+
+	var response strings.Builder
+	fmt.Fprintf(&response, "Chat %q successfully created.\n", newChat.Name)
+	fmt.Fprintf(&response, "Character %q added.", selectedCharacter.Name)
+
+	return core.Result{Response: response.String()}, nil
 }
 
 func optionCharacter(commandCtx core.CommandContext) (core.Result, error) {
 	newCharacter, err := commandCtx.Runtime.DB().AddCharacter(commandCtx.Runtime.Context(), database.AddCharacterParams{
 		Name: strings.TrimSpace(commandCtx.Args[1]),
-		Card: pqtype.NullRawMessage{},
+		Card: json.RawMessage{},
 		//TODO: allow for creation of user character. maybe own option user
 		IsUser: sql.NullBool{Bool: false, Valid: true},
 	})
