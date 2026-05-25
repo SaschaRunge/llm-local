@@ -93,28 +93,39 @@ func optionChat(commandCtx core.CommandContext) (core.Result, error) {
 }
 
 func optionCharacter(commandCtx core.CommandContext) (core.Result, error) {
-	newCharacter, err := commandCtx.Runtime.Store().DBQueries.AddCharacter(commandCtx.Runtime.Context(), database.AddCharacterParams{
-		Name: strings.TrimSpace(commandCtx.Args[1]),
-		Card: json.RawMessage("{}"),
-		//TODO: allow for creation of user character. maybe own option user
-		IsUser: sql.NullBool{Bool: false, Valid: true},
+	var err error
+	var result core.Result
+	err = commandCtx.Runtime.Store().ExecTx(commandCtx.Runtime.Context(), func(qtx *database.Queries) error {
+		newCharacter, err := qtx.AddCharacter(commandCtx.Runtime.Context(), database.AddCharacterParams{
+			Name: strings.TrimSpace(commandCtx.Args[1]),
+			Card: json.RawMessage("{}"),
+			//TODO: allow for creation of user character. maybe own option user
+			IsUser: sql.NullBool{Bool: false, Valid: true},
+		})
+		if err != nil {
+			return err
+		}
+
+		switch currentScene := commandCtx.Runtime.CurrentScene().(type) {
+		case *scenes.Chat:
+			err := qtx.SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
+				ChatID:      currentScene.ID,
+				CharacterID: newCharacter.ID,
+			})
+			if err != nil {
+				return err
+			}
+
+			result = core.Result{Response: fmt.Sprintf("Character %q successfully created and subscribed to Chat %q.", newCharacter.Name, currentScene.GetName())}
+			return nil
+		default:
+			result = core.Result{Response: fmt.Sprintf("Character %q successfully created.", newCharacter.Name)}
+			return nil
+		}
 	})
 	if err != nil {
 		return core.Result{}, err
 	}
 
-	switch currentScene := commandCtx.Runtime.CurrentScene().(type) {
-	case *scenes.Chat:
-		err := commandCtx.Runtime.Store().DBQueries.SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
-			ChatID:      currentScene.ID,
-			CharacterID: newCharacter.ID,
-		})
-		if err != nil {
-			return core.Result{}, err
-		}
-
-		return core.Result{Response: fmt.Sprintf("Character %q successfully created and subscribed to Chat %q.", newCharacter.Name, currentScene.GetName())}, nil
-	default:
-		return core.Result{Response: fmt.Sprintf("Character %q successfully created.", newCharacter.Name)}, nil
-	}
+	return result, nil
 }
