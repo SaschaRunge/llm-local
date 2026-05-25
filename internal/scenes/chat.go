@@ -228,6 +228,10 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 		return core.Result{}, fmt.Errorf("no chat history, nothing to regenerate")
 	}
 
+	if history[len(history)-1].Role != communication.RoleAssistant {
+		return core.Result{}, fmt.Errorf("can not regenerate user message")
+	}
+
 	lastMessage := history[len(history)-1]
 	regenerationPrompt := fmt.Sprintf(
 		"[SYSTEM: The user requested a regeneration of your previous answer with the following comment: %q. Please rephrase accordingly. Your previous answer was: %q.]",
