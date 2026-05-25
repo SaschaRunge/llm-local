@@ -5,10 +5,11 @@ import (
 
 	"github.com/SaschaRunge/llm-local/internal/cli/commands/selector"
 	"github.com/SaschaRunge/llm-local/internal/core"
+	"github.com/SaschaRunge/llm-local/internal/database"
 )
 
-func selectCharacter(commandCtx core.CommandContext) (character, error) {
-	availableCharacters, err := commandCtx.Runtime.Store().DBQueries.GetAvailableCharacters(commandCtx.Runtime.Context())
+func selectCharacter(commandCtx core.CommandContext, dbQueries *database.Queries) (character, error) {
+	availableCharacters, err := dbQueries.GetAvailableCharacters(commandCtx.Runtime.Context())
 	if err != nil {
 		return character{}, err
 	}

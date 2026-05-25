@@ -54,22 +54,32 @@ func (c *new) ParseArgs(rawArgs string) []string {
 }
 
 func optionChat(commandCtx core.CommandContext) (core.Result, error) {
-	selectedCharacter, err := selectCharacter(commandCtx)
-	if err != nil {
-		return core.Result{}, err
-	}
+	var newChat database.Chat
+	var selectedCharacter character
+	var err error
+	err = commandCtx.Runtime.Store().ExecTx(commandCtx.Runtime.Context(), func(qtx *database.Queries) error {
+		selectedCharacter, err = selectCharacter(commandCtx, qtx)
+		if err != nil {
+			return err
+		}
 
-	newChat, err := commandCtx.Runtime.Store().DBQueries.AddChat(commandCtx.Runtime.Context(), database.AddChatParams{
-		Name:            strings.TrimSpace(commandCtx.Args[1]),
-		UserCharacterID: DefaultUserID,
-	})
-	if err != nil {
-		return core.Result{}, err
-	}
+		newChat, err = qtx.AddChat(commandCtx.Runtime.Context(), database.AddChatParams{
+			Name:            strings.TrimSpace(commandCtx.Args[1]),
+			UserCharacterID: DefaultUserID,
+		})
+		if err != nil {
+			return err
+		}
 
-	err = commandCtx.Runtime.Store().DBQueries.SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
-		ChatID:      newChat.ID,
-		CharacterID: selectedCharacter.ID,
+		err = qtx.SubscribeToChat(commandCtx.Runtime.Context(), database.SubscribeToChatParams{
+			ChatID:      newChat.ID,
+			CharacterID: selectedCharacter.ID,
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
 	if err != nil {
 		return core.Result{}, err
