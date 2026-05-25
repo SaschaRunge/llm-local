@@ -23,6 +23,22 @@ type Store struct {
 	DBQueries *database.Queries
 }
 
+func (s *Store) ExecTx(ctx context.Context, fn func(*database.Queries) error) error {
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	qtx := s.DBQueries.WithTx(tx)
+	err = fn(qtx)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 type AllowsRawInput interface {
 	HandleRawInput(rawInput string) (Result, error)
 }
