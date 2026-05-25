@@ -51,5 +51,5 @@ func (c *chats) Execute(commandCtx core.CommandContext) (core.Result, error) {
 		addListItem(chat.Name)
 	}
 
-	return core.Result{Response: response.String()}, nil
+	return core.Result{Response: fmt.Sprintf("The following chats are available:\n%s", response.String())}, nil
 }
