@@ -6,12 +6,13 @@ import (
 
 func All() []core.Command {
 	return []core.Command{
+		//&add{},
 		&atCharacter{},
 		&characters{},
-		&join{},
 		&chats{},
 		&debugDelete{},
 		&exit{},
+		&join{},
 		&lobby{},
 		&new{},
 		&regenerate{},
