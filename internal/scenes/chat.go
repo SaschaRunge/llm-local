@@ -21,6 +21,7 @@ const (
 )
 
 var SystemUserID = uuid.MustParse("00000000-0000-0000-0000-000000000000")
+var SystemUserName = "System"
 
 type Chat struct {
 	card           card
@@ -164,7 +165,8 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 	}
 
 	assistantMessage := cachedMessage{
-		//TODO: need to specify which character is talking
+		//TODO: need to specify which character is talking. currently causes index out of range when
+		//no characters in chat
 		authorID: c.characters[0].ID,
 		Message: communication.Message{
 			Name:      c.characters[0].Name,
@@ -218,6 +220,7 @@ func (c *Chat) archiveCurrentTurn(userMessage, assistantMessage cachedMessage) e
 	return nil
 }
 
+// do not allow system message to be regenerated
 func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 	history := append([]cachedMessage{}, c.cachedMessages...)
 
@@ -231,7 +234,7 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 		userInput, lastMessage.Content)
 	message := cachedMessage{
 		Message: communication.Message{
-			Name:      "System",
+			Name:      SystemUserName,
 			Role:      communication.RoleUser,
 			Reasoning: "",
 			Content:   regenerationPrompt,
@@ -315,7 +318,15 @@ func (c *Chat) loadData() error {
 		return err
 	}
 
-	fmt.Printf("TEST JSON: %s", c.card.Description)
+	systemPrompt := assembleSystemPrompt(c.card)
+	c.cachedMessages = append(c.cachedMessages, cachedMessage{
+		Message: communication.Message{
+			Name:      SystemUserName,
+			Role:      communication.RoleSystem,
+			Reasoning: "",
+			Content:   systemPrompt,
+		},
+	})
 
 	for _, message := range messages {
 		role := communication.Role(message.Role)

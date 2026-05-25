@@ -9,7 +9,7 @@ import (
 
 type join struct{}
 
-func (c *join) Name() string { return "/chat" }
+func (c *join) Name() string { return "/join" }
 func (c *join) Description() string {
 	return "Starts the chat interface. Will load or create the chat [chat_name]."
 }
