@@ -110,7 +110,7 @@ func (c *Cli) Run() error {
 		}
 
 		if result.NextScene != nil && result.NextScene != c.CurrentScene() {
-			fmt.Printf("Entering %s:\n", result.NextScene.GetName())
+			fmt.Printf("Entering %s:\n\n", result.NextScene.GetName())
 			c.currentScene = result.NextScene
 		} else {
 			fmt.Println(result.Response)

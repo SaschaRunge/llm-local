@@ -43,5 +43,5 @@ func (c *characters) Execute(commandCtx core.CommandContext) (core.Result, error
 		}
 	}
 
-	return core.Result{Response: response.String()}, nil
+	return core.Result{Response: fmt.Sprintf("The following characters are currently in chat %s:\n%s", chat.GetName(), response.String())}, nil
 }
