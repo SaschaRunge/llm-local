@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -100,7 +99,7 @@ func optionCharacter(commandCtx core.CommandContext) (core.Result, error) {
 			Name: strings.TrimSpace(commandCtx.Args[1]),
 			Card: json.RawMessage("{}"),
 			//TODO: allow for creation of user character. maybe own option user
-			IsUser: sql.NullBool{Bool: false, Valid: true},
+			IsUser: false,
 		})
 		if err != nil {
 			return err

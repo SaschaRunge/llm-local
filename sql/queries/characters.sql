@@ -29,3 +29,10 @@ WHERE
     is_user = 'false' AND
     is_system = 'false' AND
     deleted_at IS NULL;
+
+-- name: UpdateCharacterCard :exec
+UPDATE characters
+SET 
+    updated_at = NOW(),
+    card = $2
+WHERE id = $1;

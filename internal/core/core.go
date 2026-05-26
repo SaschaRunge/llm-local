@@ -7,6 +7,15 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/database"
 )
 
+// TODO: currently duplicate of chat.card
+type Card struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Personality string `json:"personality"`
+	FirstMsg    string `json:"first_msg"`
+	MsgExample  string `json:"msg_example"`
+}
+
 type CommandContext struct {
 	Cmd     string
 	Args    []string

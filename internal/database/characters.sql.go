@@ -7,7 +7,6 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 
 	"github.com/google/uuid"
@@ -29,7 +28,7 @@ RETURNING id, created_at, updated_at, deleted_at, name, card, is_user, is_system
 type AddCharacterParams struct {
 	Name   string
 	Card   json.RawMessage
-	IsUser sql.NullBool
+	IsUser bool
 }
 
 func (q *Queries) AddCharacter(ctx context.Context, arg AddCharacterParams) (Character, error) {
@@ -150,4 +149,22 @@ func (q *Queries) GetUserCharactersLikeName(ctx context.Context, name string) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateCharacterCard = `-- name: UpdateCharacterCard :exec
+UPDATE characters
+SET 
+    updated_at = NOW(),
+    card = $2
+WHERE id = $1
+`
+
+type UpdateCharacterCardParams struct {
+	ID   uuid.UUID
+	Card json.RawMessage
+}
+
+func (q *Queries) UpdateCharacterCard(ctx context.Context, arg UpdateCharacterCardParams) error {
+	_, err := q.db.ExecContext(ctx, updateCharacterCard, arg.ID, arg.Card)
+	return err
 }

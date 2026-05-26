@@ -19,8 +19,8 @@ type Character struct {
 	DeletedAt sql.NullTime
 	Name      string
 	Card      json.RawMessage
-	IsUser    sql.NullBool
-	IsSystem  sql.NullBool
+	IsUser    bool
+	IsSystem  bool
 }
 
 type Chat struct {
