@@ -49,7 +49,7 @@ func (c *Cli) Store() *core.Store {
 	return c.store
 }
 
-func (c *Cli) GetInput() string {
+func (c *Cli) GetInput() (string, error) {
 	input := ""
 	for {
 		c.scanner.Scan()
@@ -58,7 +58,7 @@ func (c *Cli) GetInput() string {
 			break
 		}
 	}
-	return input
+	return input, nil
 }
 
 func (c *Cli) Execute(cmd core.Command, rawArgs string) (core.Result, error) {
@@ -97,7 +97,10 @@ func (c *Cli) Run() error {
 		var result core.Result
 		var err error
 
-		rawInput := c.GetInput()
+		rawInput, err := c.GetInput()
+		if err != nil {
+			fmt.Printf("unable to process input, error: %s", err)
+		}
 		preprocessor, inputIsCommand := parser.SelectPreprocessorByPrefix(rawInput)
 		if inputIsCommand {
 			cmd, rawArgs := preprocessor(rawInput)

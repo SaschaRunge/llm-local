@@ -7,8 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 
-	_ "github.com/SaschaRunge/llm-local/internal/cli/commands/selector"
+	"github.com/SaschaRunge/llm-local/internal/cli/commands/selector"
 	"github.com/SaschaRunge/llm-local/internal/core"
 	"github.com/SaschaRunge/llm-local/internal/database"
 )
@@ -28,9 +29,34 @@ func (c *edit) CanExecute(commandCtx core.CommandContext) bool {
 }
 
 func (c *edit) Execute(commandCtx core.CommandContext) (core.Result, error) {
+	selection, err := selector.SelectJSONField(core.Card{}, commandCtx.Runtime.GetInput)
+	if err != nil {
+		return core.Result{}, err
+	}
+
 	char, err := selectCharacter(commandCtx, commandCtx.Runtime.Store().DBQueries)
 	if err != nil {
 		return core.Result{}, err
+	}
+
+	type user struct {
+		FirstName string `json:"firstName"`
+		LastName  string `json:"lastName"`
+	}
+
+	u := user{FirstName: "John", LastName: "Doe"}
+	s := reflect.ValueOf(u)
+
+	fmt.Println("TEEEEEST: Name:", s.FieldByName("FirstName"))
+
+	newCard := core.Card{}
+	json.Unmarshal(char.Card, &newCard)
+	structAsReflectType := reflect.TypeOf(newCard)
+	structAsValueType := reflect.ValueOf(newCard)
+	for i := range structAsReflectType.NumField() {
+		if selection == structAsReflectType.Field(i).Tag.Get("json") {
+			fmt.Printf("return: %q  :   %q\n", structAsReflectType.Field(i).Name, structAsValueType.Field(i))
+		}
 	}
 
 	input, err := inputFromExternal(commandCtx.Runtime.Context(), string(char.Card))

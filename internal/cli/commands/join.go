@@ -48,12 +48,11 @@ func (c *join) Execute(commandCtx core.CommandContext) (core.Result, error) {
 			return core.Result{}, fmt.Errorf("no valid chats available")
 		}
 
-		selectedChat = selector.Select(
+		selectedChat, err = selector.Select(
 			chats,
 			func(chat database.Chat) string { return chat.Name },
 			commandCtx.Runtime.GetInput)
-
-		if selectedChat.Name == "" {
+		if err != nil || selectedChat.Name == "" {
 			return core.Result{}, err
 		}
 	}

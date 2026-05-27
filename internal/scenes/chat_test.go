@@ -37,8 +37,8 @@ func (r *mockRuntime) Store() *core.Store {
 	return &core.Store{}
 }
 
-func (r *mockRuntime) GetInput() string {
-	return ""
+func (r *mockRuntime) GetInput() (string, error) {
+	return "", nil
 }
 
 func (r *mockRuntime) Handle(input string) (core.Scene, error) {

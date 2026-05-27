@@ -17,13 +17,12 @@ func selectCharacter(commandCtx core.CommandContext, dbQueries *database.Queries
 		return character{}, fmt.Errorf("no valid characters available")
 	}
 
-	selectedCharacter := selector.Select(
+	selectedCharacter, err := selector.Select(
 		availableCharacters,
 		func(char character) string { return char.Name },
 		commandCtx.Runtime.GetInput)
-
-	if selectedCharacter.Name == "" {
-		return character{}, nil
+	if err != nil || selectedCharacter.Name == "" {
+		return character{}, err
 	}
 
 	return selectedCharacter, nil
