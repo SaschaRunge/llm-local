@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strings"
 
 	"github.com/SaschaRunge/llm-local/internal/cli/commands/selector"
 	"github.com/SaschaRunge/llm-local/internal/core"
@@ -39,32 +40,41 @@ func (c *edit) Execute(commandCtx core.CommandContext) (core.Result, error) {
 		return core.Result{}, err
 	}
 
-	type user struct {
-		FirstName string `json:"firstName"`
-		LastName  string `json:"lastName"`
-	}
+	/*
+		type user struct {
+			FirstName string `json:"firstName"`
+			LastName  string `json:"lastName"`
+		}
 
-	u := user{FirstName: "John", LastName: "Doe"}
-	s := reflect.ValueOf(u)
+		u := user{FirstName: "John", LastName: "Doe"}
+		s := reflect.ValueOf(u)
 
-	fmt.Println("TEEEEEST: Name:", s.FieldByName("FirstName"))
+		fmt.Println("TEEEEEST: Name:", s.FieldByName("FirstName"))*/
 
 	newCard := core.Card{}
 	json.Unmarshal(char.Card, &newCard)
 	structAsReflectType := reflect.TypeOf(newCard)
 	structAsValueType := reflect.ValueOf(newCard)
-	for i := range structAsReflectType.NumField() {
-		if selection == structAsReflectType.Field(i).Tag.Get("json") {
-			fmt.Printf("return: %q  :   %q\n", structAsReflectType.Field(i).Name, structAsValueType.Field(i))
+	index := 0
+	for index = range structAsReflectType.NumField() {
+		if selection == structAsReflectType.Field(index).Tag.Get("json") {
+			fmt.Printf("return: %q  :   %q\n", structAsReflectType.Field(index).Name, structAsValueType.Field(index))
+			break
 		}
 	}
 
-	input, err := inputFromExternal(commandCtx.Runtime.Context(), string(char.Card))
+	input, err := inputFromExternal(commandCtx.Runtime.Context(), fmt.Sprintf("%s", structAsValueType.Field(index)))
 	if err != nil {
 		return core.Result{}, err
 	}
-	if json.Valid([]byte(input)) {
-		char.Card = json.RawMessage(input)
+	structValue := reflect.ValueOf(&newCard).Elem()
+	structFieldValue := structValue.Field(index)
+	structFieldValue.SetString(strings.TrimSpace(input))
+
+	inputAsJson, _ := json.Marshal(&newCard)
+	if json.Valid(inputAsJson) {
+		char.Card = json.RawMessage(inputAsJson)
+		fmt.Println("YEEEEES!")
 	}
 
 	//chat, isSceneChat := commandCtx.Runtime.CurrentScene().(*scenes.Chat)
@@ -89,10 +99,10 @@ func inputFromExternal(ctx context.Context, data string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer os.Remove(tmp.Name())
+
 	os.WriteFile(tmp.Name(), []byte(data), 2)
 	tmp.Close()
-
-	defer os.Remove(tmp.Name())
 
 	//likely shouldn't be with context so the user doesn't lose his input on crash
 	cmd := exec.CommandContext(ctx, "nvim", tmp.Name())

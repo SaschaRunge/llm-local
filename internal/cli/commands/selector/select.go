@@ -16,6 +16,7 @@ func SelectJSONField[T any](jsonStruct T, reader func() (string, error)) (select
 	structJSONTags := []string{}
 	structAsReflectType := reflect.TypeOf(jsonStruct)
 	for i := range structAsReflectType.NumField() {
+		//TODO: probably use lookup
 		structJSONTags = append(structJSONTags, structAsReflectType.Field(i).Tag.Get("json"))
 	}
 
