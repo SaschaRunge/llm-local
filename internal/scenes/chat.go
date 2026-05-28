@@ -24,7 +24,7 @@ var SystemUserID = uuid.MustParse("00000000-0000-0000-0000-000000000000")
 var SystemUserName = "System"
 
 type Chat struct {
-	card           core.Card
+	card           json.RawMessage
 	userCharacter  character
 	cachedMessages []cachedMessage
 	characters     []character
@@ -318,7 +318,10 @@ func (c *Chat) loadData() error {
 		return err
 	}
 
-	systemPrompt := assembleSystemPrompt(c.card)
+	systemPrompt, err := assembleSystemPrompt(c.card)
+	if err != nil {
+		return err
+	}
 	c.cachedMessages = append(c.cachedMessages, cachedMessage{
 		Message: communication.Message{
 			Name:      SystemUserName,
@@ -356,13 +359,19 @@ func asComMessages(messages []cachedMessage) []communication.Message {
 	return comMessages
 }
 
-func assembleSystemPrompt(card core.Card) string {
+func assembleSystemPrompt(card json.RawMessage) (string, error) {
 	var systemPrompt strings.Builder
 
-	fmt.Fprintf(&systemPrompt, "%s\n", llm.SystemPrompt)
-	fmt.Fprintf(&systemPrompt, "%s\n", card.Description)
+	cardStruct := core.Card{}
+	err := json.Unmarshal(card, &cardStruct)
+	if err != nil {
+		return "", err
+	}
 
-	return systemPrompt.String()
+	fmt.Fprintf(&systemPrompt, "%s\n", llm.SystemPrompt)
+	fmt.Fprintf(&systemPrompt, "%s\n", cardStruct.Description)
+
+	return systemPrompt.String(), nil
 }
 
 func mapFromDBUserCharacter(userCharacter database.GetUserCharacterInChatByIDRow) character {
