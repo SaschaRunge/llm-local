@@ -19,69 +19,61 @@ type edit struct{}
 
 func (c *edit) Name() string { return "/edit" }
 func (c *edit) Description() string {
-	return "Edit the character card for character [character_name]."
+	return "Edit the card for the selected chat or character."
 }
-func (c *edit) Usage() string     { return fmt.Sprintf("%s [OPTIONAL:character_name]", c.Name()) }
+func (c *edit) Usage() string     { return fmt.Sprintf("%s", c.Name()) }
 func (c *edit) MinArguments() int { return 0 }
-func (c *edit) MaxArguments() int { return 1 }
+func (c *edit) MaxArguments() int { return 0 }
 
 func (c *edit) CanExecute(commandCtx core.CommandContext) bool {
 	return true
 }
 
 func (c *edit) Execute(commandCtx core.CommandContext) (core.Result, error) {
-	selection, err := selector.SelectJSONField(core.Card{}, commandCtx.Runtime.GetInput)
+	selectedCharacter, err := selectCharacter(commandCtx, commandCtx.Runtime.Store().DBQueries)
 	if err != nil {
 		return core.Result{}, err
 	}
 
-	char, err := selectCharacter(commandCtx, commandCtx.Runtime.Store().DBQueries)
+	selectionName, selectionPosition, err := selector.SelectJSONField(core.Card{}, commandCtx.Runtime.GetInput)
 	if err != nil {
 		return core.Result{}, err
 	}
-
-	/*
-		type user struct {
-			FirstName string `json:"firstName"`
-			LastName  string `json:"lastName"`
-		}
-
-		u := user{FirstName: "John", LastName: "Doe"}
-		s := reflect.ValueOf(u)
-
-		fmt.Println("TEEEEEST: Name:", s.FieldByName("FirstName"))*/
 
 	newCard := core.Card{}
-	json.Unmarshal(char.Card, &newCard)
-	structAsReflectType := reflect.TypeOf(newCard)
-	structAsValueType := reflect.ValueOf(newCard)
-	index := 0
-	for index = range structAsReflectType.NumField() {
-		if selection == structAsReflectType.Field(index).Tag.Get("json") {
-			fmt.Printf("return: %q  :   %q\n", structAsReflectType.Field(index).Name, structAsValueType.Field(index))
-			break
-		}
+	json.Unmarshal(selectedCharacter.Card, &newCard)
+
+	cardValue := reflect.ValueOf(&newCard).Elem()
+	cardFieldValue := cardValue.Field(selectionPosition)
+
+	if !cardFieldValue.IsValid() {
+		return core.Result{}, fmt.Errorf("unexpected error: position %d doesn't exist in card struct", selectionPosition)
 	}
 
-	input, err := inputFromExternal(commandCtx.Runtime.Context(), fmt.Sprintf("%s", structAsValueType.Field(index)))
+	if !cardFieldValue.CanSet() {
+		return core.Result{}, fmt.Errorf("cannot set %s field value", selectionName)
+	}
+
+	input, err := inputFromExternal(commandCtx.Runtime.Context(), fmt.Sprintf("%s", cardFieldValue))
 	if err != nil {
 		return core.Result{}, err
 	}
-	structValue := reflect.ValueOf(&newCard).Elem()
-	structFieldValue := structValue.Field(index)
-	structFieldValue.SetString(strings.TrimSpace(input))
 
-	inputAsJson, _ := json.Marshal(&newCard)
-	if json.Valid(inputAsJson) {
-		char.Card = json.RawMessage(inputAsJson)
-		fmt.Println("YEEEEES!")
+	cardFieldValue.SetString(strings.TrimSpace(input))
+
+	inputAsJSON, err := json.Marshal(&newCard)
+	if err != nil {
+		return core.Result{}, err
+	}
+	if !json.Valid(inputAsJSON) {
+		return core.Result{}, fmt.Errorf("%s is not valid json", inputAsJSON)
 	}
 
-	//chat, isSceneChat := commandCtx.Runtime.CurrentScene().(*scenes.Chat)
+	selectedCharacter.Card = json.RawMessage(inputAsJSON)
 
 	err = commandCtx.Runtime.Store().DBQueries.UpdateCharacterCard(commandCtx.Runtime.Context(), database.UpdateCharacterCardParams{
-		ID:   char.ID,
-		Card: char.Card,
+		ID:   selectedCharacter.ID,
+		Card: selectedCharacter.Card,
 	})
 	if err != nil {
 		return core.Result{}, err
