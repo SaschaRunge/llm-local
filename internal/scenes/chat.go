@@ -24,7 +24,7 @@ var SystemUserID = uuid.MustParse("00000000-0000-0000-0000-000000000000")
 var SystemUserName = "System"
 
 type Chat struct {
-	card           Card
+	card           core.Card
 	userCharacter  character
 	cachedMessages []cachedMessage
 	characters     []character
@@ -40,14 +40,6 @@ type cachedMessage struct {
 	id       uuid.UUID
 	authorID uuid.UUID
 	communication.Message
-}
-
-type Card struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Personality string `json:"personality"`
-	FirstMsg    string `json:"first_msg"`
-	MsgExample  string `json:"msg_example"`
 }
 
 type character = database.GetCharactersInChatRow
@@ -364,7 +356,7 @@ func asComMessages(messages []cachedMessage) []communication.Message {
 	return comMessages
 }
 
-func assembleSystemPrompt(card Card) string {
+func assembleSystemPrompt(card core.Card) string {
 	var systemPrompt strings.Builder
 
 	fmt.Fprintf(&systemPrompt, "%s\n", llm.SystemPrompt)
