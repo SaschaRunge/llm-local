@@ -16,14 +16,7 @@ var DefaultUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
 
 type new struct{}
 
-type option func(core.CommandContext) (core.Result, error)
-
 type character = database.GetAvailableCharactersRow
-
-var options = map[string]option{
-	"chat":      optionChat,
-	"character": optionCharacter,
-}
 
 func (c *new) Name() string { return "/new" }
 func (c *new) Description() string {
@@ -38,6 +31,11 @@ func (c *new) CanExecute(commandCtx core.CommandContext) bool {
 }
 
 func (c *new) Execute(commandCtx core.CommandContext) (core.Result, error) {
+	var options = map[string]option{
+		"chat":      optionChat,
+		"character": optionCharacter,
+	}
+
 	optionArg := commandCtx.Args[0]
 	executeOption, ok := options[optionArg]
 	if !ok {

@@ -12,22 +12,32 @@ import (
 const maxAttempts = 100
 const cancel = ":x"
 
-func SelectJSONField[T any](jsonStruct T, reader func() (string, error)) (selection string, e error) {
-	structJSONTags := []string{}
-	structAsReflectType := reflect.TypeOf(jsonStruct)
-	for i := range structAsReflectType.NumField() {
-		//TODO: probably use lookup
-		structJSONTags = append(structJSONTags, structAsReflectType.Field(i).Tag.Get("json"))
+func SelectJSONField[T any](jsonStruct T, reader func() (string, error)) (selectionName string, selectionIndex int, e error) {
+	jsonTags := []string{}
+	jsonTagPositions := map[string]int{}
+
+	jsonStructReflectType := reflect.TypeOf(jsonStruct)
+	for i := range jsonStructReflectType.NumField() {
+		tag, ok := jsonStructReflectType.Field(i).Tag.Lookup("json")
+		// TODO: silently drops broken keys, not sure if that's okay yet
+		if ok {
+			jsonTags = append(jsonTags, tag)
+			jsonTagPositions[tag] = i
+		}
 	}
 
-	selection, err := Select(structJSONTags, func(s string) string {
+	selectionName, err := Select(jsonTags, func(s string) string {
 		return s
 	}, reader)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
-	return selection, nil
+	selectionIndex, ok := jsonTagPositions[selectionName]
+	if !ok {
+		return "", 0, fmt.Errorf("unexpected error: selection of json-tag did not return a valid key")
+	}
+	return selectionName, selectionIndex, nil
 }
 
 /*
