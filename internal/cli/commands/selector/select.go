@@ -84,16 +84,19 @@ func Select[T any](items []T, toString func(T) string, reader func(string) (stri
 			return selection, err
 		}
 
+		completionMessage := "Selected %q.\n\n"
 		input = strings.TrimSpace(input)
 		index, err := strconv.Atoi(input)
 		if err != nil {
 			for _, item := range items {
 				itemName = toString(item)
 				if itemName == input {
+					fmt.Printf(completionMessage, input)
 					return item, nil
 				}
 			}
 			if input == cancel {
+				//TODO: specify error handling, as this throws an error under in parent function. likely return custom Error ErrSelectionCanceled
 				fmt.Println("Cancel selection... .")
 				return
 			}
@@ -107,6 +110,7 @@ func Select[T any](items []T, toString func(T) string, reader func(string) (stri
 			continue
 		}
 
+		fmt.Printf(completionMessage, toString(items[index]))
 		return items[index], nil
 	}
 }

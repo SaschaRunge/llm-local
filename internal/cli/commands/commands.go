@@ -2,9 +2,12 @@ package commands
 
 import (
 	"github.com/SaschaRunge/llm-local/internal/core"
+	"github.com/SaschaRunge/llm-local/internal/database"
 )
 
 type option func(core.CommandContext) (core.Result, error)
+
+type character = database.GetAvailableCharactersRow
 
 func All() []core.Command {
 	return []core.Command{

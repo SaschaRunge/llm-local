@@ -16,8 +16,6 @@ var DefaultUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
 
 type new struct{}
 
-type character = database.GetAvailableCharactersRow
-
 func (c *new) Name() string { return "/new" }
 func (c *new) Description() string {
 	return "Create a new chat or character"
@@ -32,8 +30,8 @@ func (c *new) CanExecute(commandCtx core.CommandContext) bool {
 
 func (c *new) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	var options = map[string]option{
-		"chat":      optionChat,
-		"character": optionCharacter,
+		"chat":      newChat,
+		"character": newCharacter,
 	}
 
 	optionArg := commandCtx.Args[0]
@@ -50,7 +48,7 @@ func (c *new) ParseArgs(rawArgs string) []string {
 	return parts
 }
 
-func optionChat(commandCtx core.CommandContext) (core.Result, error) {
+func newChat(commandCtx core.CommandContext) (core.Result, error) {
 	var newChat database.Chat
 	var selectedCharacter character
 	var err error
@@ -89,7 +87,7 @@ func optionChat(commandCtx core.CommandContext) (core.Result, error) {
 	return core.Result{Response: response.String()}, nil
 }
 
-func optionCharacter(commandCtx core.CommandContext) (core.Result, error) {
+func newCharacter(commandCtx core.CommandContext) (core.Result, error) {
 	var err error
 	var result core.Result
 	err = commandCtx.Runtime.Store().ExecTx(commandCtx.Runtime.Context(), func(qtx *database.Queries) error {
