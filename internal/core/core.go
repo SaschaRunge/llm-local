@@ -71,7 +71,7 @@ type CustomParser interface {
 type Runtime interface {
 	Context() context.Context
 	CurrentScene() Scene
-	GetInput() (string, error)
+	GetInput(string) (string, error)
 	Store() *Store
 }
 

@@ -12,7 +12,7 @@ import (
 const maxAttempts = 100
 const cancel = ":x"
 
-func SelectJSONField[T any](jsonStruct T, reader func() (string, error)) (selectionName string, selectionIndex int, e error) {
+func SelectJSONField[T any](jsonStruct T, reader func(string) (string, error)) (selectionName string, selectionIndex int, e error) {
 	jsonTags := []string{}
 	jsonTagPositions := map[string]int{}
 
@@ -51,7 +51,7 @@ Value)IsValud
 */
 
 // Select takes a list of items []T and a conversion function toString. Select displays the contents of []T as described by toString and allows selection through the reader function.
-func Select[T any](items []T, toString func(T) string, reader func() (string, error)) (selection T, e error) {
+func Select[T any](items []T, toString func(T) string, reader func(string) (string, error)) (selection T, e error) {
 	if len(items) == 0 {
 		return
 	}
@@ -79,7 +79,7 @@ func Select[T any](items []T, toString func(T) string, reader func() (string, er
 			return selection, fmt.Errorf("No valid input provided. Smashing your keyboard doesn't solve anything. Cancel selection... .")
 		}
 
-		input, err := reader()
+		input, err := reader("")
 		if err != nil {
 			return selection, err
 		}
@@ -97,7 +97,7 @@ func Select[T any](items []T, toString func(T) string, reader func() (string, er
 				fmt.Println("Cancel selection... .")
 				return
 			}
-			fmt.Printf("Specified name %q was not found. Please try again.", input)
+			fmt.Printf("Specified name %q was not found. Please try again.\n", input)
 			continue
 		}
 

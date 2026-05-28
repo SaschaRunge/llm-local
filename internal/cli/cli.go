@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/SaschaRunge/llm-local/internal/cli/commands"
 	"github.com/SaschaRunge/llm-local/internal/cli/parser"
@@ -49,16 +51,23 @@ func (c *Cli) Store() *core.Store {
 	return c.store
 }
 
-func (c *Cli) GetInput() (string, error) {
-	input := ""
+func (c *Cli) GetInput(prefill string) (string, error) {
+	var input string
+	var err error
+
 	for {
 		c.scanner.Scan()
 		input = c.scanner.Text()
+		if input == ":e" {
+			input, err = inputFromExternal(c.Context(), prefill)
+			if err != nil {
+				return "", err
+			}
+		}
 		if input != "" {
-			break
+			return input, nil
 		}
 	}
-	return input, nil
 }
 
 func (c *Cli) Execute(cmd core.Command, rawArgs string) (core.Result, error) {
@@ -97,7 +106,7 @@ func (c *Cli) Run() error {
 		var result core.Result
 		var err error
 
-		rawInput, err := c.GetInput()
+		rawInput, err := c.GetInput("")
 		if err != nil {
 			fmt.Printf("unable to process input, error: %s", err)
 		}
@@ -156,6 +165,38 @@ func (c *Cli) handleCommand(cmd, rawArgs string) (core.Result, error) {
 	}
 
 	return result, err
+}
+
+func inputFromExternal(ctx context.Context, data string) (string, error) {
+	const workingDir = "./"
+
+	workingDirAbs, _ := filepath.Abs(workingDir)
+
+	tmp, err := os.CreateTemp(workingDirAbs, "tmp_input_")
+	if err != nil {
+		return "", err
+	}
+	defer os.Remove(tmp.Name())
+
+	os.WriteFile(tmp.Name(), []byte(data), 2)
+	tmp.Close()
+
+	//likely shouldn't be with context so the user doesn't lose his input on crash
+	cmd := exec.CommandContext(ctx, "nvim", tmp.Name())
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+
+	input, err := os.ReadFile(tmp.Name())
+	if err != nil {
+		return "", err
+	}
+
+	return string(input), nil
 }
 
 func getRegistry() map[string]core.Command {

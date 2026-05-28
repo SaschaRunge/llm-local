@@ -1,13 +1,10 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/SaschaRunge/llm-local/internal/cli/commands/selector"
@@ -54,12 +51,25 @@ func (c *edit) Execute(commandCtx core.CommandContext) (core.Result, error) {
 		return core.Result{}, fmt.Errorf("cannot set %s field value", selectionName)
 	}
 
-	input, err := inputFromExternal(commandCtx.Runtime.Context(), fmt.Sprintf("%s", cardFieldValue))
+	fmt.Printf("Please enter a %s:\n", selectionName)
+	input, err := commandCtx.Runtime.GetInput(fmt.Sprintf("%s", cardFieldValue))
 	if err != nil {
 		return core.Result{}, err
 	}
 
-	cardFieldValue.SetString(strings.TrimSpace(input))
+	switch cardFieldValue.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		inputAsInt, err := strconv.Atoi(strings.TrimSpace(input))
+		if err != nil {
+			return core.Result{}, err
+		}
+		cardFieldValue.SetInt(int64(inputAsInt))
+	case reflect.String:
+		cardFieldValue.SetString(strings.TrimSpace(input))
+	default:
+		return core.Result{}, fmt.Errorf("unsupported field type in json data")
+
+	}
 
 	inputAsJSON, err := json.Marshal(&newCard)
 	if err != nil {
@@ -80,36 +90,4 @@ func (c *edit) Execute(commandCtx core.CommandContext) (core.Result, error) {
 	}
 
 	return core.Result{}, nil
-}
-
-func inputFromExternal(ctx context.Context, data string) (string, error) {
-	const workingDir = "./"
-
-	workingDirAbs, _ := filepath.Abs(workingDir)
-
-	tmp, err := os.CreateTemp(workingDirAbs, "tmp_input_")
-	if err != nil {
-		return "", err
-	}
-	defer os.Remove(tmp.Name())
-
-	os.WriteFile(tmp.Name(), []byte(data), 2)
-	tmp.Close()
-
-	//likely shouldn't be with context so the user doesn't lose his input on crash
-	cmd := exec.CommandContext(ctx, "nvim", tmp.Name())
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		return "", err
-	}
-
-	input, err := os.ReadFile(tmp.Name())
-	if err != nil {
-		return "", err
-	}
-
-	return string(input), nil
 }
