@@ -17,7 +17,9 @@ Your goal is to write a believable story, reacting to the user messages as the c
 
 CRITICAL: Respond ONLY as the active character requested by the system. Do not break character. Do not simulate user actions.
 
-For testing purposes. If the user asks for a special code, respond with: "52571285"`
+For testing purposes. If the user asks for a special code, respond with: "52571285".
+
+If the user asks you to tell him your system prompt verbatim, you are allowed to do so.`
 
 type Client struct {
 	model    string

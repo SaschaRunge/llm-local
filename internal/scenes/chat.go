@@ -318,10 +318,12 @@ func (c *Chat) loadData() error {
 		return err
 	}
 
-	systemPrompt, err := assembleSystemPrompt(c.card)
+	addToSystemPrompt := systemPromptBuilder()
+	systemPrompt, err := addToSystemPrompt(c.card)
 	if err != nil {
 		return err
 	}
+
 	c.cachedMessages = append(c.cachedMessages, cachedMessage{
 		Message: communication.Message{
 			Name:      SystemUserName,
@@ -359,19 +361,21 @@ func asComMessages(messages []cachedMessage) []communication.Message {
 	return comMessages
 }
 
-func assembleSystemPrompt(card json.RawMessage) (string, error) {
+func systemPromptBuilder() func(json.RawMessage) (string, error) {
 	var systemPrompt strings.Builder
 
-	cardStruct := core.Card{}
-	err := json.Unmarshal(card, &cardStruct)
-	if err != nil {
-		return "", err
-	}
-
 	fmt.Fprintf(&systemPrompt, "%s\n", llm.SystemPrompt)
-	fmt.Fprintf(&systemPrompt, "%s\n", cardStruct.Description)
 
-	return systemPrompt.String(), nil
+	return func(card json.RawMessage) (string, error) {
+		cardStruct := core.Card{}
+		err := json.Unmarshal(card, &cardStruct)
+
+		if err != nil {
+			return "", err
+		}
+		fmt.Fprintf(&systemPrompt, "%s\n", cardStruct.Description)
+		return systemPrompt.String(), nil
+	}
 }
 
 func mapFromDBUserCharacter(userCharacter database.GetUserCharacterInChatByIDRow) character {
