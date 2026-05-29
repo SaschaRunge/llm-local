@@ -21,8 +21,11 @@ func selectCharacter(commandCtx core.CommandContext, dbQueries *database.Queries
 		availableCharacters,
 		func(char character) string { return char.Name },
 		commandCtx.Runtime.GetInput)
-	if err != nil || selectedCharacter.Name == "" {
+	if err != nil {
 		return character{}, err
+	}
+	if selectedCharacter.Name == "" {
+		return character{}, fmt.Errorf("character not found")
 	}
 
 	return selectedCharacter, nil
