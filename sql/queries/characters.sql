@@ -30,9 +30,10 @@ WHERE
     is_system = 'false' AND
     deleted_at IS NULL;
 
--- name: UpdateCharacterCard :exec
+-- name: UpdateCharacterCard :one
 UPDATE characters
 SET 
     updated_at = NOW(),
     card = $2
-WHERE id = $1;
+WHERE id = $1
+RETURNING id;

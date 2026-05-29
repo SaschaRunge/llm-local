@@ -151,12 +151,13 @@ func (q *Queries) GetUserCharactersLikeName(ctx context.Context, name string) ([
 	return items, nil
 }
 
-const updateCharacterCard = `-- name: UpdateCharacterCard :exec
+const updateCharacterCard = `-- name: UpdateCharacterCard :one
 UPDATE characters
 SET 
     updated_at = NOW(),
     card = $2
 WHERE id = $1
+RETURNING id
 `
 
 type UpdateCharacterCardParams struct {
@@ -164,7 +165,9 @@ type UpdateCharacterCardParams struct {
 	Card json.RawMessage
 }
 
-func (q *Queries) UpdateCharacterCard(ctx context.Context, arg UpdateCharacterCardParams) error {
-	_, err := q.db.ExecContext(ctx, updateCharacterCard, arg.ID, arg.Card)
-	return err
+func (q *Queries) UpdateCharacterCard(ctx context.Context, arg UpdateCharacterCardParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, updateCharacterCard, arg.ID, arg.Card)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }

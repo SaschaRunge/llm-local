@@ -31,3 +31,16 @@ WHERE characters.id = (
 -- name: GetCardFromChatByID :one
 SELECT card FROM chats
 WHERE chats.id = $1;
+
+-- name: GetAvailableChats :many
+SELECT id, name, card FROM chats
+WHERE
+    deleted_at IS NULL;
+
+-- name: UpdateChatCard :one
+UPDATE chats
+SET 
+    updated_at = NOW(),
+    card = $2
+WHERE id = $1
+RETURNING id;

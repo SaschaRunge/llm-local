@@ -79,6 +79,41 @@ func (q *Queries) GetAllChats(ctx context.Context) ([]Chat, error) {
 	return items, nil
 }
 
+const getAvailableChats = `-- name: GetAvailableChats :many
+SELECT id, name, card FROM chats
+WHERE
+    deleted_at IS NULL
+`
+
+type GetAvailableChatsRow struct {
+	ID   uuid.UUID
+	Name string
+	Card json.RawMessage
+}
+
+func (q *Queries) GetAvailableChats(ctx context.Context) ([]GetAvailableChatsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAvailableChats)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAvailableChatsRow
+	for rows.Next() {
+		var i GetAvailableChatsRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Card); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCardFromChatByID = `-- name: GetCardFromChatByID :one
 SELECT card FROM chats
 WHERE chats.id = $1
@@ -167,4 +202,25 @@ func (q *Queries) GetUserCharacterInChatByID(ctx context.Context, id uuid.UUID) 
 	var i GetUserCharacterInChatByIDRow
 	err := row.Scan(&i.ID, &i.Name, &i.Card)
 	return i, err
+}
+
+const updateChatCard = `-- name: UpdateChatCard :one
+UPDATE chats
+SET 
+    updated_at = NOW(),
+    card = $2
+WHERE id = $1
+RETURNING id
+`
+
+type UpdateChatCardParams struct {
+	ID   uuid.UUID
+	Card json.RawMessage
+}
+
+func (q *Queries) UpdateChatCard(ctx context.Context, arg UpdateChatCardParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, updateChatCard, arg.ID, arg.Card)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }

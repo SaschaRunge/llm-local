@@ -8,6 +8,7 @@ import (
 type option func(core.CommandContext) (core.Result, error)
 
 type character = database.GetAvailableCharactersRow
+type chat = database.GetAvailableChatsRow
 
 func All() []core.Command {
 	return []core.Command{

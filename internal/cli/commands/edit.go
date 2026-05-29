@@ -10,6 +10,7 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/cli/commands/selector"
 	"github.com/SaschaRunge/llm-local/internal/core"
 	"github.com/SaschaRunge/llm-local/internal/database"
+	"github.com/SaschaRunge/llm-local/internal/scenes"
 )
 
 type edit struct{}
@@ -23,7 +24,9 @@ func (c *edit) MinArguments() int { return 1 }
 func (c *edit) MaxArguments() int { return 1 }
 
 func (c *edit) CanExecute(commandCtx core.CommandContext) bool {
-	return true
+	//TODO: temporary, because otherwise i'd have to refresh the chat when calling from chat
+	_, isSceneChat := commandCtx.Runtime.CurrentScene().(*scenes.Lobby)
+	return isSceneChat
 }
 
 func (c *edit) Execute(commandCtx core.CommandContext) (core.Result, error) {
@@ -43,7 +46,29 @@ func (c *edit) Execute(commandCtx core.CommandContext) (core.Result, error) {
 }
 
 func editChat(commandCtx core.CommandContext) (core.Result, error) {
-	return core.Result{}, nil
+	selectedChat, err := selectChat(commandCtx, commandCtx.Runtime.Store().DBQueries)
+	if err != nil {
+		return core.Result{}, err
+	}
+
+	var changedTag string
+	selectedChat.Card, changedTag, err = editCard(commandCtx, selectedChat.Card)
+	if err != nil {
+		return core.Result{}, err
+	}
+
+	insertedChatID, err := commandCtx.Runtime.Store().DBQueries.UpdateChatCard(commandCtx.Runtime.Context(), database.UpdateChatCardParams{
+		ID:   selectedChat.ID,
+		Card: selectedChat.Card,
+	})
+	if err != nil {
+		return core.Result{}, err
+	}
+	if insertedChatID != selectedChat.ID {
+		return core.Result{}, fmt.Errorf("unexpected error: can't find correspondig id for inserting chat after udpate")
+	}
+
+	return core.Result{Response: fmt.Sprintf("\n%s successfully saved!", changedTag)}, nil
 }
 
 func editCharacter(commandCtx core.CommandContext) (core.Result, error) {
@@ -58,12 +83,15 @@ func editCharacter(commandCtx core.CommandContext) (core.Result, error) {
 		return core.Result{}, err
 	}
 
-	err = commandCtx.Runtime.Store().DBQueries.UpdateCharacterCard(commandCtx.Runtime.Context(), database.UpdateCharacterCardParams{
+	insertedCharacterID, err := commandCtx.Runtime.Store().DBQueries.UpdateCharacterCard(commandCtx.Runtime.Context(), database.UpdateCharacterCardParams{
 		ID:   selectedCharacter.ID,
 		Card: selectedCharacter.Card,
 	})
 	if err != nil {
 		return core.Result{}, err
+	}
+	if insertedCharacterID != selectedCharacter.ID {
+		return core.Result{}, fmt.Errorf("unexpected error: can't find correspondig id for inserting character after udpate")
 	}
 
 	return core.Result{Response: fmt.Sprintf("\n%s successfully saved!", changedTag)}, nil
