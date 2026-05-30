@@ -179,7 +179,7 @@ func cleanHTMLTags(input, tagName string) string {
 
 	for {
 		iOpening := strings.Index(input, openingTag)
-		iClosing := strings.Index(input, closingTag)
+		iClosing := strings.LastIndex(input, closingTag)
 
 		if iOpening < 0 || iClosing < 0 {
 			break
