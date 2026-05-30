@@ -60,5 +60,19 @@ func CleanHTMLTags(input, tagName string) string {
 
 		input = fmt.Sprintf("%s%s", input[:iOpening], input[iClosing+len(closingTag):])
 	}
+
+	openingTag = "<|channel>"
+	closingTag = "<channel|>"
+
+	for {
+		iOpening := strings.Index(input, openingTag)
+		iClosing := strings.LastIndex(input, closingTag)
+
+		if iOpening < 0 || iClosing < 0 {
+			break
+		}
+
+		input = fmt.Sprintf("%s%s", input[:iOpening], input[iClosing+len(closingTag):])
+	}
 	return strings.TrimSpace(input)
 }
