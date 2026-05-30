@@ -14,7 +14,7 @@ func (c *atCharacter) Name() string { return "@" }
 func (c *atCharacter) Description() string {
 	return "Generates an answer as the specified character."
 }
-func (c *atCharacter) Usage() string     { return "@[character] [text]" }
+func (c *atCharacter) Usage() string     { return "@[character] [OPTIONAL: text]" }
 func (c *atCharacter) MinArguments() int { return 1 }
 func (c *atCharacter) MaxArguments() int { return 2 }
 
