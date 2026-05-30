@@ -128,7 +128,8 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 	}
 
 	return core.Result{
-		Response:  core.ColorMagenta + currentCharacter.Name + ":\n" + core.ColorReset + response + "\n",
+		Author:    currentCharacter.Name,
+		Response:  response,
 		NextScene: c,
 	}, nil
 }
@@ -165,7 +166,7 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 		//no characters in chat
 		authorID: uuid.MustParse("00000000-0000-0000-0000-000000000000"),
 		Message: communication.Message{
-			Name:      "System",
+			Name:      SystemUserName,
 			Role:      communication.RoleAssistant,
 			Reasoning: "",
 			Content:   response,
@@ -178,7 +179,8 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 	}
 
 	return core.Result{
-		Response:  core.ColorMagenta + "System:\n" + core.ColorReset + response + "\n",
+		Author:    SystemUserName,
+		Response:  response,
 		NextScene: c,
 	}, nil
 }
@@ -276,6 +278,7 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 	c.cachedMessages[len(history)-1] = answer
 
 	return core.Result{
+		Author:    lastMessage.Name,
 		Response:  response,
 		NextScene: c,
 	}, nil

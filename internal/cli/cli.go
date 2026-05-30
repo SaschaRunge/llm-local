@@ -66,7 +66,7 @@ func (c *Cli) GetInput(prefill string) (string, error) {
 			}
 		}
 		if input != "" {
-			return input, nil
+			return input + "\n", nil
 		}
 	}
 }
@@ -127,7 +127,7 @@ func (c *Cli) Run() error {
 			fmt.Printf("Entering %s:\n\n", result.NextScene.GetName())
 			c.currentScene = result.NextScene
 		} else {
-			fmt.Println(cleanHTMLTags(result.Response, "think"))
+			fmt.Print(cleanHTMLTags(result.Response, "think"))
 		}
 	}
 }

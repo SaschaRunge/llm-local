@@ -30,6 +30,7 @@ type CommandContext struct {
 }
 
 type Result struct {
+	Author    string
 	Response  string
 	NextScene Scene
 }
