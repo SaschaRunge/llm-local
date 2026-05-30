@@ -3,7 +3,6 @@ package llm
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/SaschaRunge/llm-local/internal/communication"
 
@@ -11,7 +10,7 @@ import (
 	"github.com/mozilla-ai/any-llm-go/providers/llamacpp"
 )
 
-const pathToSystemPrompt = "./system_prompt.md"
+// const pathToSystemPrompt = "./system_prompt.md"
 const SystemPrompt = `
 ### INSTRUCTIONS:
 You are a masterful story teller and book writer.
@@ -107,6 +106,7 @@ func roleIsValid(role communication.Role) bool {
 	}
 }
 
+/*
 func loadSystemPrompt() (string, error) {
 	systemPrompt, err := os.ReadFile(pathToSystemPrompt)
 	if err != nil {
@@ -114,4 +114,4 @@ func loadSystemPrompt() (string, error) {
 	}
 
 	return string(systemPrompt), err
-}
+}*/

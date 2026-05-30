@@ -112,8 +112,9 @@ func (c *Cli) Run() error {
 		fmt.Println("")
 		if err != nil {
 			fmt.Println(core.ColorRed + "Error:" + core.ColorReset)
-			fmt.Printf("unable to process input, error: %s\n", err)
+			fmt.Printf("unable to process input, error: %s", err)
 		}
+
 		preprocessor, inputIsCommand := parser.SelectPreprocessorByPrefix(rawInput)
 		if inputIsCommand {
 			cmd, rawArgs := preprocessor(rawInput)
@@ -123,7 +124,7 @@ func (c *Cli) Run() error {
 		}
 		if err != nil {
 			fmt.Println(core.ColorRed + "Error:" + core.ColorReset)
-			fmt.Printf("unable to process input, error: %s\n", err)
+			fmt.Printf("unable to process input, error: %s", err)
 		}
 
 		if result.NextScene != nil && result.NextScene != c.CurrentScene() {

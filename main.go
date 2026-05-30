@@ -9,9 +9,9 @@ import (
 
 	"database/sql"
 	"fmt"
-	"log"
+	_ "log"
 	"os"
-	"strings"
+	_ "strings"
 
 	"github.com/SaschaRunge/llm-local/internal/cli"
 	_ "github.com/SaschaRunge/llm-local/internal/cli"
@@ -22,14 +22,10 @@ import (
 
 	"github.com/joho/godotenv"
 
-	anyllm "github.com/mozilla-ai/any-llm-go"
+	_ "github.com/mozilla-ai/any-llm-go"
 
 	_ "github.com/mozilla-ai/any-llm-go/providers/llamacpp"
 )
-
-const pathToSystemPrompt = "./system_prompt.md"
-const colorGrey = "\033[2m"
-const colorReset = "\033[0m"
 
 func main() {
 	//ctx := context.Background()
@@ -158,7 +154,7 @@ func main() {
 
 // this is not proper: very short thinks will break, </think> is not greyed and parts of the thoughts may leak in to the answer
 // maybe adjust buffer size by content or just buffer if < is present
-func handleStream(chunks <-chan anyllm.ChatCompletionChunk, errs <-chan error) (answer, thoughts string, err error) {
+/*func handleStream(chunks <-chan anyllm.ChatCompletionChunk, errs <-chan error) (answer, thoughts string, err error) {
 	var answerContent strings.Builder
 	var thoughtsContent strings.Builder
 
@@ -191,4 +187,4 @@ func handleStream(chunks <-chan anyllm.ChatCompletionChunk, errs <-chan error) (
 	fmt.Println()
 
 	return answerContent.String(), thoughtsContent.String(), nil
-}
+}*/
