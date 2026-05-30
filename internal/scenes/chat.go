@@ -128,7 +128,7 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 	}
 
 	return core.Result{
-		Response:  response + "\n",
+		Response:  core.ColorMagenta + currentCharacter.Name + ":\n" + core.ColorReset + response + "\n",
 		NextScene: c,
 	}, nil
 }
@@ -163,9 +163,9 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 	assistantMessage := cachedMessage{
 		//TODO: need to specify which character is talking. currently causes index out of range when
 		//no characters in chat
-		authorID: c.characters[0].ID,
+		authorID: uuid.MustParse("00000000-0000-0000-0000-000000000000"),
 		Message: communication.Message{
-			Name:      c.characters[0].Name,
+			Name:      "System",
 			Role:      communication.RoleAssistant,
 			Reasoning: "",
 			Content:   response,
@@ -178,7 +178,7 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 	}
 
 	return core.Result{
-		Response:  response + "\n",
+		Response:  core.ColorMagenta + "System:\n" + core.ColorReset + response + "\n",
 		NextScene: c,
 	}, nil
 }

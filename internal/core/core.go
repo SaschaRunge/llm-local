@@ -7,6 +7,13 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/database"
 )
 
+const (
+	ColorGrey    = "\033[2m"
+	ColorReset   = "\033[0m"
+	ColorBlue    = "\033[94m"
+	ColorMagenta = "\033[95m"
+)
+
 // TODO: currently duplicate of chat.card
 type Card struct {
 	Name        string `json:"name"`

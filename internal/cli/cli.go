@@ -107,6 +107,7 @@ func (c *Cli) Run() error {
 		var result core.Result
 		var err error
 
+		fmt.Printf(core.ColorBlue + "User:\n" + core.ColorReset)
 		rawInput, err := c.GetInput("")
 		if err != nil {
 			fmt.Printf("unable to process input, error: %s", err)

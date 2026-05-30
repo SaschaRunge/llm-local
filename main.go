@@ -192,18 +192,3 @@ func handleStream(chunks <-chan anyllm.ChatCompletionChunk, errs <-chan error) (
 
 	return answerContent.String(), thoughtsContent.String(), nil
 }
-
-func extractThinking(content string) (answer, thoughts string) {
-	parts := strings.Split(content, "</think>")
-
-	if len(parts) > 1 {
-		answer := parts[1]
-		thoughts := strings.Trim(parts[0], "<think>")
-		thoughts = strings.Trim(thoughts, "</think>")
-		thoughts = strings.TrimSpace(thoughts)
-
-		return answer, thoughts
-	}
-
-	return parts[0], ""
-}
