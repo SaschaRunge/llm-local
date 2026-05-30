@@ -53,6 +53,7 @@ func newChat(commandCtx core.CommandContext) (core.Result, error) {
 	var selectedCharacter character
 	var err error
 	err = commandCtx.Runtime.Store().ExecTx(commandCtx.Runtime.Context(), func(qtx *database.Queries) error {
+		fmt.Println("Add a character to the created chat!")
 		selectedCharacter, err = selectCharacter(commandCtx, qtx)
 		if err != nil {
 			return err
