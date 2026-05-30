@@ -318,10 +318,19 @@ func (c *Chat) loadData() error {
 		return err
 	}
 
-	addToSystemPrompt := systemPromptBuilder()
-	systemPrompt, err := addToSystemPrompt(c.card)
-	if err != nil {
+	var systemPrompt strings.Builder
+	addToSystemPrompt := systemPromptBuilder(&systemPrompt)
+
+	fmt.Fprintf(&systemPrompt, "### WORLD CONTEXT\n")
+	if err = addToSystemPrompt(c.card, "chat"); err != nil {
 		return err
+	}
+
+	fmt.Fprintf(&systemPrompt, "### ACTIVE CHARACTERS\n")
+	for _, char := range c.characters {
+		if err = addToSystemPrompt(char.Card, "character"); err != nil {
+			return err
+		}
 	}
 
 	c.cachedMessages = append(c.cachedMessages, cachedMessage{
@@ -329,9 +338,11 @@ func (c *Chat) loadData() error {
 			Name:      SystemUserName,
 			Role:      communication.RoleSystem,
 			Reasoning: "",
-			Content:   systemPrompt,
+			Content:   systemPrompt.String(),
 		},
 	})
+
+	fmt.Printf("SYST PROMPT: \n\n %s", systemPrompt.String())
 
 	for _, message := range messages {
 		role := communication.Role(message.Role)
@@ -361,21 +372,43 @@ func asComMessages(messages []cachedMessage) []communication.Message {
 	return comMessages
 }
 
-func systemPromptBuilder() func(json.RawMessage) (string, error) {
-	var systemPrompt strings.Builder
+func systemPromptBuilder(systemPromptPtr *strings.Builder) func(card json.RawMessage, cardType string) error {
+	fmt.Fprintf(systemPromptPtr, "%s\n", llm.SystemPrompt)
 
-	fmt.Fprintf(&systemPrompt, "%s\n", llm.SystemPrompt)
-
-	return func(card json.RawMessage) (string, error) {
+	return func(card json.RawMessage, cardType string) error {
 		cardStruct := core.Card{}
 		err := json.Unmarshal(card, &cardStruct)
-
 		if err != nil {
-			return "", err
+			return err
 		}
-		fmt.Fprintf(&systemPrompt, "%s\n", cardStruct.Description)
-		return systemPrompt.String(), nil
+
+		switch cardType {
+		case "character":
+			if name := strings.TrimSpace(cardStruct.Name); name == "" {
+				return fmt.Errorf("character with empty names are not allowed")
+			}
+			fmt.Fprintf(systemPromptPtr, "[Character: %s]\n", cardStruct.Name)
+		case "chat":
+		default:
+			return fmt.Errorf("unexpected error: got unexpected card type when building system prompt")
+		}
+
+		systemPromptPtr.WriteString(formatField("Description", cardStruct.Description))
+		systemPromptPtr.WriteString(formatField("Personality", cardStruct.Personality))
+		systemPromptPtr.WriteString(formatField("Example Message", cardStruct.MsgExample))
+		fmt.Fprintln(systemPromptPtr, "")
+
+		return nil
 	}
+}
+
+func formatField(fieldName, content string) string {
+	cleanedContent := strings.TrimSpace(content)
+	if cleanedContent == "" {
+		return ""
+	}
+
+	return fmt.Sprintf("%s: \n\"\"\"\n%s\n\"\"\"\n", fieldName, cleanedContent)
 }
 
 func mapFromDBUserCharacter(userCharacter database.GetUserCharacterInChatByIDRow) character {
