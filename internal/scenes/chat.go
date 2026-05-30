@@ -10,6 +10,7 @@ import (
 
 	"github.com/SaschaRunge/llm-local/internal/communication"
 	"github.com/SaschaRunge/llm-local/internal/core"
+	"github.com/SaschaRunge/llm-local/internal/core/parser"
 	"github.com/SaschaRunge/llm-local/internal/database"
 	"github.com/SaschaRunge/llm-local/internal/llm"
 
@@ -28,6 +29,7 @@ type Chat struct {
 	userCharacter  character
 	cachedMessages []cachedMessage
 	characters     []character
+	systemPrompt   string
 
 	ID   uuid.UUID
 	Name string
@@ -122,8 +124,12 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 		},
 	}
 
-	err = c.archiveCurrentTurn(userMessage, assistantMessage)
-	if err != nil {
+	if userMessage.Content != "" {
+		if err = c.archiveMessage(userMessage); err != nil {
+			return core.Result{}, err
+		}
+	}
+	if err = c.archiveMessage(assistantMessage); err != nil {
 		return core.Result{}, err
 	}
 
@@ -185,6 +191,25 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 	}, nil
 }
 
+func (c *Chat) archiveMessage(message cachedMessage) error {
+	messageInDB, err := c.runtime.Store().DBQueries.AddMessage(c.runtime.Context(), database.AddMessageParams{
+		Reasoning: sql.NullString{},
+		Content:   message.Content,
+		ChatID:    c.ID,
+		AuthorID:  message.authorID,
+		Role:      string(message.Role),
+	})
+	if err != nil {
+		return err
+	}
+
+	message.id = messageInDB.ID
+
+	c.cachedMessages = append(c.cachedMessages, message)
+
+	return nil
+}
+
 func (c *Chat) archiveCurrentTurn(userMessage, assistantMessage cachedMessage) error {
 	//TODO: rollback entire commit if send fails on either Add
 	userMessageInDB, err := c.runtime.Store().DBQueries.AddMessage(c.runtime.Context(), database.AddMessageParams{
@@ -226,24 +251,36 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 		return core.Result{}, fmt.Errorf("no chat history, nothing to regenerate")
 	}
 
-	if history[len(history)-1].Role != communication.RoleAssistant {
+	lastMessage := history[len(history)-1]
+
+	if lastMessage.Role != communication.RoleAssistant {
 		return core.Result{}, fmt.Errorf("can not regenerate user message")
 	}
 
-	lastMessage := history[len(history)-1]
-	regenerationPrompt := fmt.Sprintf(
-		"[SYSTEM: The user requested a regeneration of your previous answer with the following comment: %q. Please rephrase accordingly. Your previous answer was: %q.]",
-		userInput, lastMessage.Content)
-	message := cachedMessage{
-		Message: communication.Message{
-			Name:      SystemUserName,
-			Role:      communication.RoleUser,
-			Reasoning: "",
-			Content:   regenerationPrompt,
-		},
-	}
+	if userInput != "" {
+		regenerationPrompt := fmt.Sprintf(
+			"[SYSTEM: The user requested a regeneration of your previous answer with the following comment: \"\"\"\n%s\"\"\"\n. Please rephrase accordingly. Your previous answer was: \"\"\"\n%s\"\"\"\n.]",
+			userInput, parser.CleanHTMLTags(lastMessage.Content, "think"))
 
-	history[len(history)-1] = message
+		//fmt.Printf("TEST OUTPUT: %s\n\n\n", regenerationPrompt)
+		message := cachedMessage{
+			Message: communication.Message{
+				Name:      SystemUserName,
+				Role:      communication.RoleUser,
+				Reasoning: "",
+				Content:   regenerationPrompt,
+			},
+		}
+
+		history[len(history)-1] = message
+	} else {
+		if len(history) == 1 {
+			history = append([]cachedMessage{}, history[len(history)-1])
+		} else {
+			history = append([]cachedMessage{}, history[:len(history)-1]...)
+			//fmt.Printf("RESPONDING AS ROLE %s\n", history[len(history)-1].Role)
+		}
+	}
 
 	ctxResponse, cancel := context.WithTimeout(c.runtime.Context(), generateAnswerTimeoutInSeconds*time.Second)
 	defer cancel()
@@ -275,7 +312,7 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 		return core.Result{}, err
 	}
 
-	c.cachedMessages[len(history)-1] = answer
+	c.cachedMessages[len(c.cachedMessages)-1] = answer
 
 	return core.Result{
 		Author:    lastMessage.Name,
@@ -355,6 +392,7 @@ func (c *Chat) loadData() error {
 		if !role.IsValid() {
 			return fmt.Errorf("message role %q is not a valid role", role)
 		}
+		//fmt.Println(role)
 		c.cachedMessages = append(c.cachedMessages, cachedMessage{
 			id:       message.ID,
 			authorID: message.AuthorID,
@@ -367,6 +405,7 @@ func (c *Chat) loadData() error {
 		})
 	}
 
+	c.systemPrompt = systemPrompt.String()
 	return nil
 }
 
