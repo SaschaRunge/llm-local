@@ -19,7 +19,7 @@ func (c *edit) Name() string { return "/edit" }
 func (c *edit) Description() string {
 	return "Edit the card for the selected chat or character."
 }
-func (c *edit) Usage() string     { return fmt.Sprintf("%s [option] [name]", c.Name()) }
+func (c *edit) Usage() string     { return fmt.Sprintf("%s [option]", c.Name()) }
 func (c *edit) MinArguments() int { return 1 }
 func (c *edit) MaxArguments() int { return 1 }
 
