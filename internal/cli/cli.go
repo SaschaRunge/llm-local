@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/SaschaRunge/llm-local/internal/cli/commands"
 	"github.com/SaschaRunge/llm-local/internal/cli/parser"
@@ -125,7 +126,7 @@ func (c *Cli) Run() error {
 			fmt.Printf("Entering %s:\n\n", result.NextScene.GetName())
 			c.currentScene = result.NextScene
 		} else {
-			fmt.Println(result.Response)
+			fmt.Println(cleanHTMLTags(result.Response, "think"))
 		}
 	}
 }
@@ -165,6 +166,23 @@ func (c *Cli) handleCommand(cmd, rawArgs string) (core.Result, error) {
 	}
 
 	return result, err
+}
+
+func cleanHTMLTags(input, tagName string) string {
+	openingTag := fmt.Sprintf("<%s>", tagName)
+	closingTag := fmt.Sprintf("</%s>", tagName)
+
+	for {
+		iOpening := strings.Index(input, openingTag)
+		iClosing := strings.Index(input, closingTag)
+
+		if iOpening < 0 || iClosing < 0 {
+			break
+		}
+
+		input = fmt.Sprintf("%s%s", input[:iOpening], input[iClosing+len(closingTag):])
+	}
+	return strings.TrimSpace(input)
 }
 
 func inputFromExternal(ctx context.Context, data string) (string, error) {
