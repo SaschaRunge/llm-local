@@ -115,7 +115,7 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 	assistantMessage := cachedMessage{
 		authorID: currentCharacter.ID,
 		Message: communication.Message{
-			Name:      c.characters[0].Name,
+			Name:      currentCharacter.Name,
 			Role:      communication.RoleAssistant,
 			Reasoning: "",
 			Content:   response,
