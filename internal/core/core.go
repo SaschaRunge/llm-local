@@ -14,7 +14,6 @@ type Card struct {
 	Personality string `json:"personality"`
 	FirstMsg    string `json:"first_msg"`
 	MsgExample  string `json:"msg_example"`
-	NotAString  int    `json:"age"`
 }
 
 type CommandContext struct {
