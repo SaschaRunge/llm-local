@@ -8,6 +8,7 @@ import (
 	"github.com/SaschaRunge/llm-local/internal/database"
 )
 
+// TODO: needs an "exclude" list to be able to avoid double adding to chat
 func selectCharacter(commandCtx core.CommandContext, dbQueries *database.Queries) (character, error) {
 	availableCharacters, err := dbQueries.GetAvailableCharacters(commandCtx.Runtime.Context())
 	if err != nil {
