@@ -62,7 +62,7 @@ func newChat(commandCtx core.CommandContext) (core.Result, error) {
 		chatName := strings.TrimSpace(commandCtx.Args[1])
 		newChat, err = qtx.AddChat(commandCtx.Runtime.Context(), database.AddChatParams{
 			Name:            strings.TrimSpace(commandCtx.Args[1]),
-			Card:            json.RawMessage(fmt.Sprintf("{\"name\": %s}", chatName)),
+			Card:            json.RawMessage(fmt.Sprintf("{\"name\": \"%s\"}", chatName)),
 			UserCharacterID: DefaultUserID,
 		})
 		if err != nil {
@@ -97,7 +97,7 @@ func newCharacter(commandCtx core.CommandContext) (core.Result, error) {
 	err = commandCtx.Runtime.Store().ExecTx(commandCtx.Runtime.Context(), func(qtx *database.Queries) error {
 		newCharacter, err := qtx.AddCharacter(commandCtx.Runtime.Context(), database.AddCharacterParams{
 			Name: charName,
-			Card: json.RawMessage(fmt.Sprintf("{\"name\": %s}", charName)),
+			Card: json.RawMessage(fmt.Sprintf("{\"name\": \"%s\"}", charName)),
 			//TODO: allow for creation of user character. maybe own option user
 			IsUser: false,
 		})
