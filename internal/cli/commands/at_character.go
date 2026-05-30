@@ -15,7 +15,7 @@ func (c *atCharacter) Description() string {
 	return "Generates an answer as the specified character."
 }
 func (c *atCharacter) Usage() string     { return "@[character] [text]" }
-func (c *atCharacter) MinArguments() int { return 2 }
+func (c *atCharacter) MinArguments() int { return 1 }
 func (c *atCharacter) MaxArguments() int { return 2 }
 
 func (c *atCharacter) CanExecute(commandCtx core.CommandContext) bool {
@@ -29,7 +29,14 @@ func (c *atCharacter) Execute(commandCtx core.CommandContext) (core.Result, erro
 		return core.Result{}, fmt.Errorf("unexpected error in command @character: type assertion failed")
 	}
 
-	result, err := chat.AtCharacter(commandCtx.Args[0], commandCtx.Args[1])
+	character := commandCtx.Args[0]
+	text := ""
+
+	if len(commandCtx.Args) == 2 {
+		text = commandCtx.Args[1]
+	}
+
+	result, err := chat.AtCharacter(character, text)
 	if err != nil {
 		err = fmt.Errorf("mention character %q failed with error: %w", commandCtx.Args[0], err)
 	}
