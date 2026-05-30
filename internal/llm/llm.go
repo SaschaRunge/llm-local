@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/SaschaRunge/llm-local/internal/communication"
 
@@ -10,21 +11,13 @@ import (
 	"github.com/mozilla-ai/any-llm-go/providers/llamacpp"
 )
 
-// const pathToSystemPrompt = "./system_prompt.md"
-const SystemPrompt = `
-### INSTRUCTIONS:
-You are a masterful story teller and book writer.
-Your goal is to write a believable story, reacting to the user messages as the characters specified by the system.
-
-CRITICAL: Respond ONLY as the active character requested by the system. Do not break character. Do not simulate user actions. If no character is specified in the last prompt, answer as a neutral story teller, describing the scene and npcs.
-
-You will be supplied a chat card and one to multiple character cards. When instructed, you will reply as the character specified by the system, using the following informations:
-
-`
+const pathToSystemPrompt = "./system_prompt.md"
 
 type Client struct {
 	model    string
 	provider *llamacpp.Provider
+
+	SystemPrompt string
 }
 
 // TODO: create client with empty history
@@ -45,6 +38,12 @@ func (c *Client) load(model string) error {
 
 	c.provider = provider
 	c.model = model
+	systemPrompt, err := os.ReadFile(pathToSystemPrompt)
+	if err != nil {
+
+		return err
+	}
+	c.SystemPrompt = string(systemPrompt)
 
 	return nil
 }
@@ -105,13 +104,3 @@ func roleIsValid(role communication.Role) bool {
 		return false
 	}
 }
-
-/*
-func loadSystemPrompt() (string, error) {
-	systemPrompt, err := os.ReadFile(pathToSystemPrompt)
-	if err != nil {
-		return "", err
-	}
-
-	return string(systemPrompt), err
-}*/

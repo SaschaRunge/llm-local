@@ -53,16 +53,16 @@ func NewSceneChat(runtime core.Runtime, chat database.Chat) (*Chat, error) {
 		Name:    chat.Name,
 	}
 
-	if err := sceneChat.loadData(); err != nil {
-		return nil, err
-	}
-
 	//TODO: do not hardcode model type/*
 	llmClient, err := llm.NewClient("qwen3.6-27b")
-	sceneChat.llmClient = llmClient
-
 	if err != nil {
 		return &Chat{}, err
+	}
+
+	sceneChat.llmClient = llmClient
+
+	if err := sceneChat.loadData(); err != nil {
+		return nil, err
 	}
 
 	return &sceneChat, nil
@@ -359,7 +359,7 @@ func (c *Chat) loadData() error {
 	}
 
 	var systemPrompt strings.Builder
-	addToSystemPrompt := systemPromptBuilder(&systemPrompt)
+	addToSystemPrompt := systemPromptBuilder(c.llmClient.SystemPrompt, &systemPrompt)
 
 	fmt.Fprintf(&systemPrompt, "### WORLD CONTEXT\n")
 	if err = addToSystemPrompt(c.card, "chat"); err != nil {
@@ -417,8 +417,10 @@ func asComMessages(messages []cachedMessage) []communication.Message {
 	return comMessages
 }
 
-func systemPromptBuilder(systemPromptPtr *strings.Builder) func(card json.RawMessage, cardType string) error {
-	fmt.Fprintf(systemPromptPtr, "%s\n", llm.SystemPrompt)
+func systemPromptBuilder(initialSystemPrompt string, systemPromptPtr *strings.Builder) func(card json.RawMessage, cardType string) error {
+	fmt.Fprintf(systemPromptPtr, "%s\n", initialSystemPrompt)
+
+	fmt.Printf("PRRRRROMPT: %s\n", initialSystemPrompt)
 
 	return func(card json.RawMessage, cardType string) error {
 		cardStruct := core.Card{}
