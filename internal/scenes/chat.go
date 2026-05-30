@@ -420,8 +420,6 @@ func asComMessages(messages []cachedMessage) []communication.Message {
 func systemPromptBuilder(initialSystemPrompt string, systemPromptPtr *strings.Builder) func(card json.RawMessage, cardType string) error {
 	fmt.Fprintf(systemPromptPtr, "%s\n", initialSystemPrompt)
 
-	fmt.Printf("PRRRRROMPT: %s\n", initialSystemPrompt)
-
 	return func(card json.RawMessage, cardType string) error {
 		cardStruct := core.Card{}
 		err := json.Unmarshal(card, &cardStruct)
