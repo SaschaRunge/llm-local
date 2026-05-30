@@ -66,7 +66,7 @@ func (c *Cli) GetInput(prefill string) (string, error) {
 			}
 		}
 		if input != "" {
-			return input + "\n", nil
+			return input, nil
 		}
 	}
 }
@@ -109,8 +109,10 @@ func (c *Cli) Run() error {
 
 		fmt.Printf(core.ColorBlue + "User:\n" + core.ColorReset)
 		rawInput, err := c.GetInput("")
+		fmt.Println("")
 		if err != nil {
-			fmt.Printf("unable to process input, error: %s", err)
+			fmt.Println(core.ColorRed + "Error:" + core.ColorReset)
+			fmt.Printf("unable to process input, error: %s\n", err)
 		}
 		preprocessor, inputIsCommand := parser.SelectPreprocessorByPrefix(rawInput)
 		if inputIsCommand {
@@ -120,14 +122,16 @@ func (c *Cli) Run() error {
 			result, err = c.handleRawInput(rawInput)
 		}
 		if err != nil {
-			fmt.Printf("unable to process input, error: %s", err)
+			fmt.Println(core.ColorRed + "Error:" + core.ColorReset)
+			fmt.Printf("unable to process input, error: %s\n", err)
 		}
 
 		if result.NextScene != nil && result.NextScene != c.CurrentScene() {
 			fmt.Printf("Entering %s:\n\n", result.NextScene.GetName())
 			c.currentScene = result.NextScene
 		} else {
-			fmt.Print(cleanHTMLTags(result.Response, "think"))
+			fmt.Println(core.ColorMagenta + result.Author + core.ColorReset)
+			fmt.Printf("%s\n\n", cleanHTMLTags(result.Response, "think"))
 		}
 	}
 }

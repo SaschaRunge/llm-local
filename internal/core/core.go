@@ -12,6 +12,7 @@ const (
 	ColorReset   = "\033[0m"
 	ColorBlue    = "\033[94m"
 	ColorMagenta = "\033[95m"
+	ColorRed     = "\033[31m"
 )
 
 // TODO: currently duplicate of chat.card
