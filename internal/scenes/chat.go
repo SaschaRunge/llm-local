@@ -347,8 +347,6 @@ func (c *Chat) loadData() error {
 		},
 	})
 
-	fmt.Printf("SYST PROMPT: \n\n %s", systemPrompt.String())
-
 	for _, message := range messages {
 		role := communication.Role(message.Role)
 		if !role.IsValid() {
