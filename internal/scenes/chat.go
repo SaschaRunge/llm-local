@@ -374,7 +374,7 @@ func (c *Chat) loadData() error {
 		return err
 	}
 
-	fmt.Fprintf(&systemPrompt, "### ACTIVE CHARACTERS\n")
+	fmt.Fprintf(&systemPrompt, "### NON-PLAYER CHARACTERS\n")
 	for _, char := range c.characters {
 		if err = addToSystemPrompt(char.Card, "character"); err != nil {
 			return err
