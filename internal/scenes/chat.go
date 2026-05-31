@@ -278,7 +278,6 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 			history = append([]cachedMessage{}, history[len(history)-1])
 		} else {
 			history = append([]cachedMessage{}, history[:len(history)-1]...)
-			//fmt.Printf("RESPONDING AS ROLE %s\n", history[len(history)-1].Role)
 		}
 	}
 
@@ -288,6 +287,10 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 	if err != nil {
 		return core.Result{}, err
 	}
+
+	/*for i, msg := range history {
+		fmt.Printf("Message in history: %d. %s\n", i, msg.Content)
+	}*/
 
 	answer := cachedMessage{
 		id:       lastMessage.id,
