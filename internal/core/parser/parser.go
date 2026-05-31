@@ -46,8 +46,9 @@ func ParseArgs(rawArgs string) []string {
 	return strings.Fields(rawArgs)
 }
 
+// TODO: no longer belongs to parser and should be part of llm. temporary workaround
 func ExtractReasoning(input, tagName string) (content, reasoning string) {
-	openingTag := fmt.Sprintf("<%s>", tagName)
+	//openingTag := fmt.Sprintf("<%s>", tagName)
 	closingTag := fmt.Sprintf("</%s>", tagName)
 
 	iOpening := 0 //strings.Index(input, openingTag)
@@ -58,7 +59,7 @@ func ExtractReasoning(input, tagName string) (content, reasoning string) {
 	}
 
 	content = fmt.Sprintf("%s%s", input[:iOpening], input[iClosing+len(closingTag):])
-	reasoning = fmt.Sprintf("%s", input[iOpening+len(openingTag):iClosing])
+	reasoning = fmt.Sprintf("%s", input[0:iClosing]) //input[iOpening+len(openingTag):iClosing])
 
 	return strings.TrimSpace(content), strings.TrimSpace(reasoning)
 }

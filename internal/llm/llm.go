@@ -13,12 +13,14 @@ import (
 )
 
 const pathToSystemPrompt = "./system_prompt.md"
+const pathToPrefill = "./prefill.md"
 
 type Client struct {
 	model    string
 	provider *llamacpp.Provider
 
 	SystemPrompt string
+	prefill      string
 }
 
 // TODO: create client with empty history
@@ -41,10 +43,15 @@ func (c *Client) load(model string) error {
 	c.model = model
 	systemPrompt, err := os.ReadFile(pathToSystemPrompt)
 	if err != nil {
-
 		return err
 	}
 	c.SystemPrompt = string(systemPrompt)
+
+	prefill, err := os.ReadFile(pathToPrefill)
+	if err != nil {
+		return err
+	}
+	c.prefill = string(prefill)
 
 	return nil
 }
@@ -55,12 +62,14 @@ func (c *Client) GenerateAnswer(ctx context.Context, messageHistory []communicat
 		return "", "", err
 	}
 
-	injection := anyllm.Message{
-		Role:    anyllm.RoleAssistant,
-		Content: "<think>",
-	}
+	if c.prefill != "" {
+		prefill := anyllm.Message{
+			Role:    anyllm.RoleAssistant,
+			Content: c.prefill,
+		}
 
-	anyllmMessageHistory = append(anyllmMessageHistory, injection)
+		anyllmMessageHistory = append(anyllmMessageHistory, prefill)
+	}
 
 	response, err := c.provider.Completion(ctx, anyllm.CompletionParams{
 		Model:    c.model,
@@ -71,7 +80,7 @@ func (c *Client) GenerateAnswer(ctx context.Context, messageHistory []communicat
 		return "", "", err
 	}
 
-	fmt.Printf("RAW RESPONSE STRING %q:\n\n\n", response.Choices[0].Message.ContentString())
+	//fmt.Printf("RAW RESPONSE STRING %q:\n\n\n", response.Choices[0].Message.ContentString())
 	content, reasoning = parser.ExtractReasoning(response.Choices[0].Message.ContentString(), "think")
 	return reasoning, content, nil
 }

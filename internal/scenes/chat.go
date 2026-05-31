@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	generateAnswerTimeoutInSeconds = 120
+	generateAnswerTimeoutInSeconds = 240
 )
 
 var SystemUserID = uuid.MustParse("00000000-0000-0000-0000-000000000000")
@@ -344,6 +344,8 @@ func (c *Chat) loadData() error {
 	var systemPrompt strings.Builder
 	addToSystemPrompt := systemPromptBuilder(c.llmClient.SystemPrompt, &systemPrompt)
 
+	fmt.Fprintf(&systemPrompt, "---\n")
+	fmt.Fprintf(&systemPrompt, "[START OF CHARACTER AND CONTEXT DATA]\n")
 	fmt.Fprintf(&systemPrompt, "### WORLD CONTEXT\n")
 	if err = addToSystemPrompt(c.card, "chat"); err != nil {
 		return err
@@ -360,6 +362,9 @@ func (c *Chat) loadData() error {
 			return err
 		}
 	}
+
+	fmt.Fprintf(&systemPrompt, "[END OF CHARACTER AND CONTEXT DATA]\n")
+	fmt.Fprintf(&systemPrompt, "---\n")
 
 	c.cachedMessages = append(c.cachedMessages, cachedMessage{
 		Message: communication.Message{
@@ -425,6 +430,8 @@ func systemPromptBuilder(initialSystemPrompt string, systemPromptPtr *strings.Bu
 		systemPromptPtr.WriteString(formatField("Personality", cardStruct.Personality))
 		systemPromptPtr.WriteString(formatField("Example Message", cardStruct.MsgExample))
 		fmt.Fprintln(systemPromptPtr, "")
+
+		//fmt.Printf("PRRRRORMPT: %s\n\n", systemPromptPtr.String())
 
 		return nil
 	}
