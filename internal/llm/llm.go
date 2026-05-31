@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/SaschaRunge/llm-local/internal/communication"
+	"github.com/SaschaRunge/llm-local/internal/core/parser"
 
 	anyllm "github.com/mozilla-ai/any-llm-go"
 	"github.com/mozilla-ai/any-llm-go/providers/llamacpp"
@@ -48,11 +49,18 @@ func (c *Client) load(model string) error {
 	return nil
 }
 
-func (c *Client) GenerateAnswer(ctx context.Context, messageHistory []communication.Message) (string, error) {
+func (c *Client) GenerateAnswer(ctx context.Context, messageHistory []communication.Message) (reasoning, content string, e error) {
 	anyllmMessageHistory, err := translateHistory(messageHistory)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
+
+	injection := anyllm.Message{
+		Role:    anyllm.RoleAssistant,
+		Content: "<think>",
+	}
+
+	anyllmMessageHistory = append(anyllmMessageHistory, injection)
 
 	response, err := c.provider.Completion(ctx, anyllm.CompletionParams{
 		Model:    c.model,
@@ -60,10 +68,12 @@ func (c *Client) GenerateAnswer(ctx context.Context, messageHistory []communicat
 	})
 
 	if err != nil || len(response.Choices) == 0 {
-		return "", err
+		return "", "", err
 	}
 
-	return response.Choices[0].Message.ContentString(), nil
+	fmt.Printf("RAW RESPONSE STRING %q:\n\n\n", response.Choices[0].Message.ContentString())
+	content, reasoning = parser.ExtractReasoning(response.Choices[0].Message.ContentString(), "think")
+	return reasoning, content, nil
 }
 
 func (c *Client) StreamAnswer(input string) string {

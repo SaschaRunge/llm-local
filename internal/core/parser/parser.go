@@ -46,33 +46,19 @@ func ParseArgs(rawArgs string) []string {
 	return strings.Fields(rawArgs)
 }
 
-func CleanHTMLTags(input, tagName string) string {
+func ExtractReasoning(input, tagName string) (content, reasoning string) {
 	openingTag := fmt.Sprintf("<%s>", tagName)
 	closingTag := fmt.Sprintf("</%s>", tagName)
 
-	for {
-		iOpening := strings.Index(input, openingTag)
-		iClosing := strings.LastIndex(input, closingTag)
+	iOpening := 0 //strings.Index(input, openingTag)
+	iClosing := strings.LastIndex(input, closingTag)
 
-		if iOpening < 0 || iClosing < 0 {
-			break
-		}
-
-		input = fmt.Sprintf("%s%s", input[:iOpening], input[iClosing+len(closingTag):])
+	if iOpening < 0 || iClosing < 0 {
+		return strings.TrimSpace(input), ""
 	}
 
-	openingTag = "<|channel>"
-	closingTag = "<channel|>"
+	content = fmt.Sprintf("%s%s", input[:iOpening], input[iClosing+len(closingTag):])
+	reasoning = fmt.Sprintf("%s", input[iOpening+len(openingTag):iClosing])
 
-	for {
-		iOpening := strings.Index(input, openingTag)
-		iClosing := strings.LastIndex(input, closingTag)
-
-		if iOpening < 0 || iClosing < 0 {
-			break
-		}
-
-		input = fmt.Sprintf("%s%s", input[:iOpening], input[iClosing+len(closingTag):])
-	}
-	return strings.TrimSpace(input)
+	return strings.TrimSpace(content), strings.TrimSpace(reasoning)
 }

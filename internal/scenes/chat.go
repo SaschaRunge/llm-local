@@ -10,7 +10,6 @@ import (
 
 	"github.com/SaschaRunge/llm-local/internal/communication"
 	"github.com/SaschaRunge/llm-local/internal/core"
-	"github.com/SaschaRunge/llm-local/internal/core/parser"
 	"github.com/SaschaRunge/llm-local/internal/database"
 	"github.com/SaschaRunge/llm-local/internal/llm"
 
@@ -109,7 +108,7 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 	ctx, cancel := context.WithTimeout(c.runtime.Context(), generateAnswerTimeoutInSeconds*time.Second)
 	defer cancel()
 
-	response, err := c.llmClient.GenerateAnswer(ctx, asComMessages(history))
+	reasoning, content, err := c.llmClient.GenerateAnswer(ctx, asComMessages(history))
 	if err != nil {
 		return core.Result{}, err
 	}
@@ -119,8 +118,8 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 		Message: communication.Message{
 			Name:      currentCharacter.Name,
 			Role:      communication.RoleAssistant,
-			Reasoning: "",
-			Content:   response,
+			Reasoning: reasoning,
+			Content:   content,
 		},
 	}
 
@@ -135,7 +134,7 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 
 	return core.Result{
 		Author:    currentCharacter.Name,
-		Response:  response,
+		Response:  content,
 		NextScene: c,
 	}, nil
 }
@@ -162,7 +161,7 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 
 	ctx, cancel := context.WithTimeout(c.runtime.Context(), generateAnswerTimeoutInSeconds*time.Second)
 	defer cancel()
-	response, err := c.llmClient.GenerateAnswer(ctx, asComMessages(history))
+	reasoning, content, err := c.llmClient.GenerateAnswer(ctx, asComMessages(history))
 	if err != nil {
 		return core.Result{}, err
 	}
@@ -174,8 +173,8 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 		Message: communication.Message{
 			Name:      SystemUserName,
 			Role:      communication.RoleAssistant,
-			Reasoning: "",
-			Content:   response,
+			Reasoning: reasoning,
+			Content:   content,
 		},
 	}
 
@@ -186,7 +185,88 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 
 	return core.Result{
 		Author:    SystemUserName,
-		Response:  response,
+		Response:  content,
+		NextScene: c,
+	}, nil
+}
+
+// do not allow system message to be regenerated
+func (c *Chat) Regenerate(userInput string) (core.Result, error) {
+	history := append([]cachedMessage{}, c.cachedMessages...)
+
+	if len(history) == 0 {
+		return core.Result{}, fmt.Errorf("no chat history, nothing to regenerate")
+	}
+
+	lastMessage := history[len(history)-1]
+
+	if lastMessage.Role != communication.RoleAssistant {
+		return core.Result{}, fmt.Errorf("can not regenerate user message")
+	}
+
+	if userInput != "" {
+		regenerationPrompt := fmt.Sprintf(
+			"[SYSTEM: The user requested a regeneration of your previous answer with the following comment: \"\"\"\n%s\"\"\"\n. Please rephrase accordingly. Your previous answer was: \"\"\"\n%s\"\"\"\n.]",
+			userInput, lastMessage.Content)
+
+		//fmt.Printf("TEST OUTPUT: %s\n\n\n", regenerationPrompt)
+		message := cachedMessage{
+			Message: communication.Message{
+				Name:      SystemUserName,
+				Role:      communication.RoleUser,
+				Reasoning: "",
+				Content:   regenerationPrompt,
+			},
+		}
+
+		history[len(history)-1] = message
+	} else {
+		if len(history) == 1 {
+			history = append([]cachedMessage{}, history[len(history)-1])
+		} else {
+			history = append([]cachedMessage{}, history[:len(history)-1]...)
+		}
+	}
+
+	ctxResponse, cancel := context.WithTimeout(c.runtime.Context(), generateAnswerTimeoutInSeconds*time.Second)
+	defer cancel()
+	reasoning, content, err := c.llmClient.GenerateAnswer(ctxResponse, asComMessages(history))
+	if err != nil {
+		return core.Result{}, err
+	}
+
+	/*for i, msg := range history {
+		fmt.Printf("Message in history: %d. %s\n", i, msg.Content)
+	}*/
+
+	answer := cachedMessage{
+		id:       lastMessage.id,
+		authorID: lastMessage.authorID,
+		Message: communication.Message{
+			Name:      lastMessage.Name,
+			Role:      communication.RoleAssistant,
+			Reasoning: reasoning,
+			Content:   content,
+		},
+	}
+
+	dbQueries := c.runtime.Store().DBQueries
+	ctx := c.runtime.Context()
+
+	err = dbQueries.ReplaceMessage(ctx, database.ReplaceMessageParams{
+		ID:        answer.id,
+		Reasoning: sql.NullString{String: answer.Reasoning, Valid: true},
+		Content:   answer.Content,
+	})
+	if err != nil {
+		return core.Result{}, err
+	}
+
+	c.cachedMessages[len(c.cachedMessages)-1] = answer
+
+	return core.Result{
+		Author:    lastMessage.Name,
+		Response:  content,
 		NextScene: c,
 	}, nil
 }
@@ -211,117 +291,17 @@ func (c *Chat) archiveMessage(message cachedMessage) error {
 }
 
 func (c *Chat) archiveCurrentTurn(userMessage, assistantMessage cachedMessage) error {
-	//TODO: rollback entire commit if send fails on either Add
-	userMessageInDB, err := c.runtime.Store().DBQueries.AddMessage(c.runtime.Context(), database.AddMessageParams{
-		Reasoning: sql.NullString{},
-		Content:   userMessage.Content,
-		ChatID:    c.ID,
-		AuthorID:  c.userCharacter.ID,
-		Role:      string(userMessage.Role),
-	})
+	err := c.archiveMessage(userMessage)
 	if err != nil {
 		return err
 	}
 
-	//TODO: currently answers just as the first character in the character list
-	assistantMessageInDB, err := c.runtime.Store().DBQueries.AddMessage(c.runtime.Context(), database.AddMessageParams{
-		Reasoning: sql.NullString{},
-		Content:   assistantMessage.Content,
-		ChatID:    c.ID,
-		AuthorID:  assistantMessage.authorID,
-		Role:      string(assistantMessage.Role),
-	})
+	err = c.archiveMessage(assistantMessage)
 	if err != nil {
 		return err
 	}
-
-	userMessage.id = userMessageInDB.ID
-	assistantMessage.id = assistantMessageInDB.ID
-
-	c.cachedMessages = append(c.cachedMessages, userMessage, assistantMessage)
 
 	return nil
-}
-
-// do not allow system message to be regenerated
-func (c *Chat) Regenerate(userInput string) (core.Result, error) {
-	history := append([]cachedMessage{}, c.cachedMessages...)
-
-	if len(history) == 0 {
-		return core.Result{}, fmt.Errorf("no chat history, nothing to regenerate")
-	}
-
-	lastMessage := history[len(history)-1]
-
-	if lastMessage.Role != communication.RoleAssistant {
-		return core.Result{}, fmt.Errorf("can not regenerate user message")
-	}
-
-	if userInput != "" {
-		regenerationPrompt := fmt.Sprintf(
-			"[SYSTEM: The user requested a regeneration of your previous answer with the following comment: \"\"\"\n%s\"\"\"\n. Please rephrase accordingly. Your previous answer was: \"\"\"\n%s\"\"\"\n.]",
-			userInput, parser.CleanHTMLTags(lastMessage.Content, "think"))
-
-		//fmt.Printf("TEST OUTPUT: %s\n\n\n", regenerationPrompt)
-		message := cachedMessage{
-			Message: communication.Message{
-				Name:      SystemUserName,
-				Role:      communication.RoleUser,
-				Reasoning: "",
-				Content:   regenerationPrompt,
-			},
-		}
-
-		history[len(history)-1] = message
-	} else {
-		if len(history) == 1 {
-			history = append([]cachedMessage{}, history[len(history)-1])
-		} else {
-			history = append([]cachedMessage{}, history[:len(history)-1]...)
-		}
-	}
-
-	ctxResponse, cancel := context.WithTimeout(c.runtime.Context(), generateAnswerTimeoutInSeconds*time.Second)
-	defer cancel()
-	response, err := c.llmClient.GenerateAnswer(ctxResponse, asComMessages(history))
-	if err != nil {
-		return core.Result{}, err
-	}
-
-	/*for i, msg := range history {
-		fmt.Printf("Message in history: %d. %s\n", i, msg.Content)
-	}*/
-
-	answer := cachedMessage{
-		id:       lastMessage.id,
-		authorID: lastMessage.authorID,
-		Message: communication.Message{
-			Name:      lastMessage.Name,
-			Role:      communication.RoleAssistant,
-			Reasoning: "",
-			Content:   response,
-		},
-	}
-
-	dbQueries := c.runtime.Store().DBQueries
-	ctx := c.runtime.Context()
-
-	err = dbQueries.ReplaceMessage(ctx, database.ReplaceMessageParams{
-		ID:        answer.id,
-		Reasoning: sql.NullString{},
-		Content:   answer.Content,
-	})
-	if err != nil {
-		return core.Result{}, err
-	}
-
-	c.cachedMessages[len(c.cachedMessages)-1] = answer
-
-	return core.Result{
-		Author:    lastMessage.Name,
-		Response:  response,
-		NextScene: c,
-	}, nil
 }
 
 func (c *Chat) GetAvailableCharacters() []character {

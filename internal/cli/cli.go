@@ -131,7 +131,7 @@ func (c *Cli) Run() error {
 			c.currentScene = result.NextScene
 		} else {
 			fmt.Println(core.ColorMagenta + result.Author + core.ColorReset)
-			fmt.Printf("%s\n\n", parser.CleanHTMLTags(result.Response, "think"))
+			fmt.Printf("%s\n\n", result.Response)
 		}
 	}
 }
