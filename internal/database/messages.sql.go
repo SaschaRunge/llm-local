@@ -120,7 +120,10 @@ characters.name AS author_name
 FROM messages
 INNER JOIN characters
     ON messages.author_id = characters.id
-WHERE messages.chat_id = $1
+WHERE 
+    messages.chat_id = $1 AND
+    messages.parent_msg_id IS NULL
+    
 ORDER BY idx ASC
 `
 
