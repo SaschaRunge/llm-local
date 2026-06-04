@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/SaschaRunge/llm-local/internal/core"
 	"github.com/SaschaRunge/llm-local/internal/scenes"
@@ -13,7 +14,7 @@ func (c *cycle) Name() string { return "/cycle" }
 func (c *cycle) Description() string {
 	return "Cycle through available regenerated variants."
 }
-func (c *cycle) Usage() string     { return fmt.Sprintf("%s", c.Name()) }
+func (c *cycle) Usage() string     { return fmt.Sprintf("%s [OPTIONAL: index]", c.Name()) }
 func (c *cycle) MinArguments() int { return 0 }
 func (c *cycle) MaxArguments() int { return 1 }
 
@@ -28,5 +29,13 @@ func (c *cycle) Execute(commandCtx core.CommandContext) (core.Result, error) {
 		return core.Result{}, fmt.Errorf("unexpected error in command /regenerate: type assertion failed")
 	}
 
-	return chat.Cycle()
+	if len(commandCtx.Args) == 0 {
+		return chat.Cycle(-1)
+	} else {
+		idx, err := strconv.Atoi(commandCtx.Args[0])
+		if err != nil {
+			return core.Result{}, fmt.Errorf("argument [index] must be a number")
+		}
+		return chat.Cycle(idx)
+	}
 }

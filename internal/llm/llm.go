@@ -81,7 +81,7 @@ func (c *Client) GenerateAnswer(ctx context.Context, messageHistory []communicat
 	}
 
 	//fmt.Printf("RAW RESPONSE STRING %q:\n\n\n", response.Choices[0].Message.ContentString())
-	content, reasoning = parser.ExtractReasoning(response.Choices[0].Message.ContentString(), "think")
+	content, reasoning = parser.ExtractReasoning(response.Choices[0].Message.ContentString(), "<channel|>")
 	return reasoning, content, nil
 }
 

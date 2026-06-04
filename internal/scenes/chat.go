@@ -145,8 +145,7 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 	}, nil
 }
 
-func (c *Chat) Cycle() (core.Result, error) {
-
+func (c *Chat) Cycle(idx int) (core.Result, error) {
 	if len(c.cachedMessages) < 1 {
 		return core.Result{}, fmt.Errorf("message history is empty, nothing to cycle through")
 	}
@@ -161,7 +160,15 @@ func (c *Chat) Cycle() (core.Result, error) {
 		return core.Result{}, fmt.Errorf("no variants of previous message available, nothing to cycle through")
 	}
 
-	c.lastResponseIdx = (c.lastResponseIdx + 1) % (maxVariants + 1)
+	if idx < 0 {
+		c.lastResponseIdx = (c.lastResponseIdx + 1) % (maxVariants + 1)
+	} else {
+		if idx == 0 || idx > maxVariants+1 {
+			return core.Result{}, fmt.Errorf("no variant with index %d. please choose an index between 1 and %d", idx, maxVariants+1)
+		}
+		c.lastResponseIdx = idx - 1
+	}
+
 	lastResponse, err := c.getLastResponse()
 	if err != nil {
 		return core.Result{}, nil
@@ -325,6 +332,7 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 
 	c.cachedMessages[len(c.cachedMessages)-1].variants = append(c.cachedMessages[len(c.cachedMessages)-1].variants, newVariant)
 	maxVariants := len(c.cachedMessages[len(c.cachedMessages)-1].variants)
+	c.lastResponseIdx = maxVariants
 
 	return core.Result{
 		Author:    lastResponse.AuthorName,

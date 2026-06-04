@@ -47,9 +47,8 @@ func ParseArgs(rawArgs string) []string {
 }
 
 // TODO: no longer belongs to parser and should be part of llm. temporary workaround
-func ExtractReasoning(input, tagName string) (content, reasoning string) {
+func ExtractReasoning(input, closingTag string) (content, reasoning string) {
 	//openingTag := fmt.Sprintf("<%s>", tagName)
-	closingTag := fmt.Sprintf("</%s>", tagName)
 
 	iOpening := 0 //strings.Index(input, openingTag)
 	iClosing := strings.LastIndex(input, closingTag)
