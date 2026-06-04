@@ -418,8 +418,6 @@ func (c *Chat) loadData() error {
 	}
 
 	for _, variant := range variants {
-		// c.cachedMessages[len(c.cachedMessages)-1].variants
-
 		c.cachedMessages[len(c.cachedMessages)-1].variants = append([]cachedMessage{}, cachedMessage{
 			id:       variant.ID,
 			authorID: variant.AuthorID,
