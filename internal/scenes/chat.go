@@ -26,6 +26,7 @@ var SystemUserName = "System"
 type Chat struct {
 	card           json.RawMessage
 	userCharacter  character
+	lastResponse   cachedMessage
 	cachedMessages []cachedMessage
 	characters     []character
 	systemPrompt   string
@@ -96,10 +97,10 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 	userMessage := cachedMessage{
 		authorID: c.userCharacter.ID,
 		Message: communication.Message{
-			Name:      c.userCharacter.Name,
-			Role:      communication.RoleUser,
-			Reasoning: "",
-			Content:   userInput,
+			AuthorName: c.userCharacter.Name,
+			Role:       communication.RoleUser,
+			Reasoning:  "",
+			Content:    userInput,
 		},
 	}
 	alteredMessage := userMessage
@@ -118,10 +119,10 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 	assistantMessage := cachedMessage{
 		authorID: currentCharacter.ID,
 		Message: communication.Message{
-			Name:      currentCharacter.Name,
-			Role:      communication.RoleAssistant,
-			Reasoning: reasoning,
-			Content:   content,
+			AuthorName: currentCharacter.Name,
+			Role:       communication.RoleAssistant,
+			Reasoning:  reasoning,
+			Content:    content,
 		},
 	}
 
@@ -133,6 +134,8 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 	if err = c.archiveMessage(assistantMessage); err != nil {
 		return core.Result{}, err
 	}
+
+	c.lastResponse = assistantMessage
 
 	return core.Result{
 		Author:    currentCharacter.Name,
@@ -152,10 +155,10 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 	userMessage := cachedMessage{
 		authorID: c.userCharacter.ID,
 		Message: communication.Message{
-			Name:      c.userCharacter.Name,
-			Role:      communication.RoleUser,
-			Reasoning: "",
-			Content:   userInput,
+			AuthorName: c.userCharacter.Name,
+			Role:       communication.RoleUser,
+			Reasoning:  "",
+			Content:    userInput,
 		},
 	}
 
@@ -173,10 +176,10 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 		//no characters in chat
 		authorID: uuid.MustParse("00000000-0000-0000-0000-000000000000"),
 		Message: communication.Message{
-			Name:      SystemUserName,
-			Role:      communication.RoleAssistant,
-			Reasoning: reasoning,
-			Content:   content,
+			AuthorName: SystemUserName,
+			Role:       communication.RoleAssistant,
+			Reasoning:  reasoning,
+			Content:    content,
 		},
 	}
 
@@ -184,6 +187,8 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 	if err != nil {
 		return core.Result{}, err
 	}
+
+	c.lastResponse = assistantMessage
 
 	return core.Result{
 		Author:    SystemUserName,
@@ -196,28 +201,32 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 	history := append([]cachedMessage{}, c.cachedMessages...)
 
-	if len(history) == 0 {
+	if len(history) <= 1 {
 		return core.Result{}, fmt.Errorf("no chat history, nothing to regenerate")
 	}
 
-	lastMessage := history[len(history)-1]
+	lastResponse := c.lastResponse
+	parentMessage := history[len(history)-1]
 
-	if lastMessage.Role != communication.RoleAssistant {
-		return core.Result{}, fmt.Errorf("can not regenerate user message")
+	if lastResponse.Role != communication.RoleAssistant {
+		return core.Result{}, fmt.Errorf("can not regenerate a user or system message")
+	}
+	if lastResponse.Content == "" {
+		return core.Result{}, fmt.Errorf("unexpected: last active response is empty")
 	}
 
 	if userInput != "" {
 		regenerationPrompt := fmt.Sprintf(
 			"[SYSTEM: The user requested a regeneration of your previous answer with the following comment: \"\"\"\n%s\"\"\"\n. Please rephrase accordingly. Your previous answer was: \"\"\"\n%s\"\"\"\n.]",
-			userInput, lastMessage.Content)
+			userInput, lastResponse.Content)
 
 		//fmt.Printf("TEST OUTPUT: %s\n\n\n", regenerationPrompt)
 		message := cachedMessage{
 			Message: communication.Message{
-				Name:      SystemUserName,
-				Role:      communication.RoleUser,
-				Reasoning: "",
-				Content:   regenerationPrompt,
+				AuthorName: SystemUserName,
+				Role:       communication.RoleUser,
+				Reasoning:  "",
+				Content:    regenerationPrompt,
 			},
 		}
 
@@ -229,16 +238,16 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 			history = append([]cachedMessage{}, history[:len(history)-1]...)
 		}
 
-		if lastMessage.Role == communication.RoleAssistant && lastMessage.Name != SystemUserName {
-			authorsNote := fmt.Sprintf("\n\n[SYSTEM: Respond strictly as %q for this turn. Maintain their tone and knowledge.]", lastMessage.Name)
+		if lastResponse.Role == communication.RoleAssistant && lastResponse.AuthorName != SystemUserName {
+			authorsNote := fmt.Sprintf("\n\n[SYSTEM: Respond strictly as %q for this turn. Maintain their tone and knowledge.]", lastResponse.AuthorName)
 
 			history = append(history, cachedMessage{
 				authorID: c.userCharacter.ID,
 				Message: communication.Message{
-					Name:      c.userCharacter.Name,
-					Role:      communication.RoleUser,
-					Reasoning: "",
-					Content:   authorsNote,
+					AuthorName: c.userCharacter.Name,
+					Role:       communication.RoleUser,
+					Reasoning:  "",
+					Content:    authorsNote,
 				},
 			})
 		}
@@ -255,49 +264,58 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 		fmt.Printf("Message in history: %d. %s\n", i, msg.Content)
 	}*/
 
-	answer := cachedMessage{
-		id:       lastMessage.id,
-		authorID: lastMessage.authorID,
-		Message: communication.Message{
-			Name:      lastMessage.Name,
-			Role:      communication.RoleAssistant,
-			Reasoning: reasoning,
-			Content:   content,
-		},
-		variants: append(lastMessage.variants, lastMessage),
-	}
-
 	dbQueries := c.runtime.Store().DBQueries
 	ctx := c.runtime.Context()
 
-	err = dbQueries.AddVariant(ctx, database.AddVariantParams{
-		Reasoning:   sql.NullString{String: lastMessage.Reasoning, Valid: true},
-		Content:     lastMessage.Content,
+	variant, err := dbQueries.AddVariant(ctx, database.AddVariantParams{
+		Reasoning:   sql.NullString{String: reasoning, Valid: true},
+		Content:     content,
 		ChatID:      c.ID,
-		AuthorID:    lastMessage.authorID,
-		Role:        string(lastMessage.Role),
-		ParentMsgID: uuid.NullUUID{UUID: lastMessage.id, Valid: true},
+		AuthorID:    lastResponse.authorID,
+		Role:        string(lastResponse.Role),
+		ParentMsgID: uuid.NullUUID{UUID: parentMessage.id, Valid: true},
 	})
 	if err != nil {
 		return core.Result{}, err
 	}
 
-	err = dbQueries.ReplaceMessage(ctx, database.ReplaceMessageParams{
-		ID:        answer.id,
-		Reasoning: sql.NullString{String: answer.Reasoning, Valid: true},
-		Content:   answer.Content,
-	})
-	if err != nil {
-		return core.Result{}, err
+	newVariant := cachedMessage{
+		id:       variant.ID,
+		authorID: variant.AuthorID,
+		Message: communication.Message{
+			AuthorName: parentMessage.AuthorName,
+			Role:       communication.RoleAssistant,
+			Reasoning:  variant.Reasoning.String,
+			Content:    variant.Content,
+		},
 	}
 
-	c.cachedMessages[len(c.cachedMessages)-1] = answer
+	c.cachedMessages[len(c.cachedMessages)-1].variants = append(c.cachedMessages[len(c.cachedMessages)-1].variants, newVariant)
+
+	/*
+		err = dbQueries.ReplaceMessage(ctx, database.ReplaceMessageParams{
+			ID:        answer.id,
+			Reasoning: sql.NullString{String: answer.Reasoning, Valid: true},
+			Content:   answer.Content,
+		})
+		if err != nil {
+			return core.Result{}, err
+		}
+	*/
 
 	return core.Result{
-		Author:    lastMessage.Name,
+		Author:    lastResponse.AuthorName,
 		Response:  content,
 		NextScene: c,
 	}, nil
+}
+
+func (c *Chat) GetAvailableCharacters() []character {
+	availableCharacters := []character{}
+	for _, char := range c.characters {
+		availableCharacters = append(availableCharacters, char)
+	}
+	return availableCharacters
 }
 
 func (c *Chat) archiveMessage(message cachedMessage) error {
@@ -333,12 +351,12 @@ func (c *Chat) archiveCurrentTurn(userMessage, assistantMessage cachedMessage) e
 	return nil
 }
 
-func (c *Chat) GetAvailableCharacters() []character {
-	availableCharacters := []character{}
-	for _, char := range c.characters {
-		availableCharacters = append(availableCharacters, char)
+func asComMessages(messages []cachedMessage) []communication.Message {
+	comMessages := []communication.Message{}
+	for _, message := range messages {
+		comMessages = append(comMessages, message.Message)
 	}
-	return availableCharacters
+	return comMessages
 }
 
 func (c *Chat) loadData() error {
@@ -405,10 +423,10 @@ func (c *Chat) loadData() error {
 
 	c.cachedMessages = append(c.cachedMessages, cachedMessage{
 		Message: communication.Message{
-			Name:      SystemUserName,
-			Role:      communication.RoleSystem,
-			Reasoning: "",
-			Content:   systemPrompt.String(),
+			AuthorName: SystemUserName,
+			Role:       communication.RoleSystem,
+			Reasoning:  "",
+			Content:    systemPrompt.String(),
 		},
 	})
 
@@ -422,10 +440,10 @@ func (c *Chat) loadData() error {
 			id:       message.ID,
 			authorID: message.AuthorID,
 			Message: communication.Message{
-				Name:      message.AuthorName,
-				Role:      role,
-				Reasoning: message.Reasoning.String,
-				Content:   message.Content,
+				AuthorName: message.AuthorName,
+				Role:       role,
+				Reasoning:  message.Reasoning.String,
+				Content:    message.Content,
 			},
 		})
 	}
@@ -435,24 +453,26 @@ func (c *Chat) loadData() error {
 			id:       variant.ID,
 			authorID: variant.AuthorID,
 			Message: communication.Message{
-				Name:      variant.AuthorName,
-				Role:      communication.Role(variant.Role),
-				Reasoning: variant.Reasoning.String,
-				Content:   variant.Content,
+				AuthorName: variant.AuthorName,
+				Role:       communication.Role(variant.Role),
+				Reasoning:  variant.Reasoning.String,
+				Content:    variant.Content,
 			},
 		})
 	}
 
+	lastMessageIndex := len(c.cachedMessages) - 1
+	lastVariantIndex := len(c.cachedMessages[len(c.cachedMessages)-1].variants) - 1
+	if len(c.cachedMessages) > 1 {
+		if len(variants) > 0 {
+			c.lastResponse = c.cachedMessages[lastMessageIndex].variants[lastVariantIndex]
+		} else {
+			c.lastResponse = c.cachedMessages[lastMessageIndex]
+		}
+	}
+
 	c.systemPrompt = systemPrompt.String()
 	return nil
-}
-
-func asComMessages(messages []cachedMessage) []communication.Message {
-	comMessages := []communication.Message{}
-	for _, message := range messages {
-		comMessages = append(comMessages, message.Message)
-	}
-	return comMessages
 }
 
 func systemPromptBuilder(initialSystemPrompt string, systemPromptPtr *strings.Builder) func(card json.RawMessage, cardType string) error {

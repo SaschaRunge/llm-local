@@ -94,7 +94,7 @@ func translate(message communication.Message) (anyllm.Message, error) {
 		return anyllm.Message{}, fmt.Errorf("message role %q is not a valid role", message.Role)
 	}
 	return anyllm.Message{
-		Name:    message.Name,
+		Name:    message.AuthorName,
 		Role:    string(message.Role),
 		Content: message.Content,
 		//Reasoning: message.Reasoning, //TODO: might need specific mapping, not sure yet

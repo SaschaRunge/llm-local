@@ -9,10 +9,10 @@ const (
 )
 
 type Message struct {
-	Name      string
-	Role      Role
-	Reasoning string
-	Content   string
+	AuthorName string
+	Role       Role
+	Reasoning  string
+	Content    string
 }
 
 func (r Role) IsValid() bool {
