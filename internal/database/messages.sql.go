@@ -25,7 +25,7 @@ VALUES (
     $5,
     (SELECT COALESCE(MAX(idx), 0) + 1 FROM messages WHERE chat_id = $3)
 )
-RETURNING id, created_at, updated_at, deleted_at, reasoning, content, chat_id, author_id, idx, role
+RETURNING id, created_at, updated_at, deleted_at, reasoning, content, chat_id, author_id, idx, role, parent_msg_id, sequence_idx
 `
 
 type AddMessageParams struct {
@@ -56,6 +56,62 @@ func (q *Queries) AddMessage(ctx context.Context, arg AddMessageParams) (Message
 		&i.AuthorID,
 		&i.Idx,
 		&i.Role,
+		&i.ParentMsgID,
+		&i.SequenceIdx,
+	)
+	return i, err
+}
+
+const addVariant = `-- name: AddVariant :one
+INSERT INTO messages(id, created_at, updated_at, reasoning, content, chat_id, author_id, role, idx, parent_msg_id, sequence_idx)
+VALUES (
+    gen_random_uuid(),
+    NOW(),
+    NOW(),
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    (SELECT idx FROM messages WHERE id = $6),
+    $6,
+    (SELECT COALESCE(MAX(sequence_idx), 0) + 1 FROM messages WHERE parent_msg_id = $6)
+)
+RETURNING id, created_at, updated_at, deleted_at, reasoning, content, chat_id, author_id, idx, role, parent_msg_id, sequence_idx
+`
+
+type AddVariantParams struct {
+	Reasoning   sql.NullString
+	Content     string
+	ChatID      uuid.UUID
+	AuthorID    uuid.UUID
+	Role        string
+	ParentMsgID uuid.NullUUID
+}
+
+func (q *Queries) AddVariant(ctx context.Context, arg AddVariantParams) (Message, error) {
+	row := q.db.QueryRowContext(ctx, addVariant,
+		arg.Reasoning,
+		arg.Content,
+		arg.ChatID,
+		arg.AuthorID,
+		arg.Role,
+		arg.ParentMsgID,
+	)
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Reasoning,
+		&i.Content,
+		&i.ChatID,
+		&i.AuthorID,
+		&i.Idx,
+		&i.Role,
+		&i.ParentMsgID,
+		&i.SequenceIdx,
 	)
 	return i, err
 }
@@ -122,32 +178,45 @@ func (q *Queries) GetChatHistory(ctx context.Context, chatID uuid.UUID) ([]GetCh
 	return items, nil
 }
 
-const getMessagesByChatID = `-- name: GetMessagesByChatID :many
-SELECT id, created_at, updated_at, deleted_at, reasoning, content, chat_id, author_id, idx, role FROM messages
-WHERE chat_id = $1
-ORDER BY idx ASC
+const getVariants = `-- name: GetVariants :many
+SELECT messages.id, 
+messages.reasoning, 
+messages.content,
+messages.author_id,
+messages.role,
+characters.name AS author_name 
+FROM messages
+INNER JOIN characters
+    ON messages.author_id = characters.id
+WHERE messages.parent_msg_id = $1
+ORDER BY sequence_idx ASC
 `
 
-func (q *Queries) GetMessagesByChatID(ctx context.Context, chatID uuid.UUID) ([]Message, error) {
-	rows, err := q.db.QueryContext(ctx, getMessagesByChatID, chatID)
+type GetVariantsRow struct {
+	ID         uuid.UUID
+	Reasoning  sql.NullString
+	Content    string
+	AuthorID   uuid.UUID
+	Role       string
+	AuthorName string
+}
+
+func (q *Queries) GetVariants(ctx context.Context, parentMsgID uuid.NullUUID) ([]GetVariantsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getVariants, parentMsgID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Message
+	var items []GetVariantsRow
 	for rows.Next() {
-		var i Message
+		var i GetVariantsRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
 			&i.Reasoning,
 			&i.Content,
-			&i.ChatID,
 			&i.AuthorID,
-			&i.Idx,
 			&i.Role,
+			&i.AuthorName,
 		); err != nil {
 			return nil, err
 		}

@@ -30,11 +30,6 @@ VALUES (
 )
 RETURNING *;
 
--- name: GetMessagesByChatID :many
-SELECT * FROM messages
-WHERE chat_id = $1
-ORDER BY idx ASC;
-
 -- name: GetChatHistory :many
 SELECT messages.id, 
 messages.reasoning, 
@@ -47,6 +42,19 @@ INNER JOIN characters
     ON messages.author_id = characters.id
 WHERE messages.chat_id = $1
 ORDER BY idx ASC;
+
+-- name: GetVariants :many
+SELECT messages.id, 
+messages.reasoning, 
+messages.content,
+messages.author_id,
+messages.role,
+characters.name AS author_name 
+FROM messages
+INNER JOIN characters
+    ON messages.author_id = characters.id
+WHERE messages.parent_msg_id = $1
+ORDER BY sequence_idx ASC;
 
 
 -- name: DeleteMessages :exec

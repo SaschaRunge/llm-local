@@ -40,6 +40,8 @@ type Chat struct {
 type cachedMessage struct {
 	id       uuid.UUID
 	authorID uuid.UUID
+	variants []cachedMessage
+
 	communication.Message
 }
 
@@ -335,6 +337,14 @@ func (c *Chat) loadData() error {
 		return err
 	}
 
+	var variants []database.GetVariantsRow
+	if len(messages) > 0 && messages[len(messages)-1].Role == string(communication.RoleAssistant) {
+		variants, err = db.GetVariants(ctx, uuid.NullUUID{UUID: messages[len(messages)-1].ID, Valid: true})
+		if err != nil {
+			return err
+		}
+	}
+
 	c.characters, err = db.GetCharactersInChat(ctx, c.ID)
 	if err != nil {
 		return err
@@ -403,6 +413,22 @@ func (c *Chat) loadData() error {
 				Role:      role,
 				Reasoning: message.Reasoning.String,
 				Content:   message.Content,
+			},
+		})
+	}
+
+	cachedVariants := []cachedMessage{}
+	for _, variant := range variants {
+		// c.cachedMessages[len(c.cachedMessages)-1].variants
+
+		cachedVariants = append(cachedVariants, cachedMessage{
+			id:       variant.ID,
+			authorID: variant.AuthorID,
+			Message: communication.Message{
+				Name:      variant.AuthorName,
+				Role:      communication.Role(variant.Role),
+				Reasoning: variant.Reasoning.String,
+				Content:   variant.Content,
 			},
 		})
 	}
