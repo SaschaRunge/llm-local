@@ -417,11 +417,10 @@ func (c *Chat) loadData() error {
 		})
 	}
 
-	cachedVariants := []cachedMessage{}
 	for _, variant := range variants {
 		// c.cachedMessages[len(c.cachedMessages)-1].variants
 
-		cachedVariants = append(cachedVariants, cachedMessage{
+		c.cachedMessages[len(c.cachedMessages)-1].variants = append([]cachedMessage{}, cachedMessage{
 			id:       variant.ID,
 			authorID: variant.AuthorID,
 			Message: communication.Message{
