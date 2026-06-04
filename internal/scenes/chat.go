@@ -264,10 +264,23 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 			Reasoning: reasoning,
 			Content:   content,
 		},
+		variants: append(lastMessage.variants, lastMessage),
 	}
 
 	dbQueries := c.runtime.Store().DBQueries
 	ctx := c.runtime.Context()
+
+	err = dbQueries.AddVariant(ctx, database.AddVariantParams{
+		Reasoning:   sql.NullString{String: lastMessage.Reasoning, Valid: true},
+		Content:     lastMessage.Content,
+		ChatID:      c.ID,
+		AuthorID:    lastMessage.authorID,
+		Role:        string(lastMessage.Role),
+		ParentMsgID: uuid.NullUUID{UUID: lastMessage.id, Valid: true},
+	})
+	if err != nil {
+		return core.Result{}, err
+	}
 
 	err = dbQueries.ReplaceMessage(ctx, database.ReplaceMessageParams{
 		ID:        answer.id,

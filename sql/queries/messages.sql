@@ -13,7 +13,7 @@ VALUES (
 )
 RETURNING *;
 
--- name: AddVariant :one
+-- name: AddVariant :exec
 INSERT INTO messages(id, created_at, updated_at, reasoning, content, chat_id, author_id, role, idx, parent_msg_id, sequence_idx)
 VALUES (
     gen_random_uuid(),

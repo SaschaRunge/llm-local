@@ -62,7 +62,7 @@ func (q *Queries) AddMessage(ctx context.Context, arg AddMessageParams) (Message
 	return i, err
 }
 
-const addVariant = `-- name: AddVariant :one
+const addVariant = `-- name: AddVariant :exec
 INSERT INTO messages(id, created_at, updated_at, reasoning, content, chat_id, author_id, role, idx, parent_msg_id, sequence_idx)
 VALUES (
     gen_random_uuid(),
@@ -89,8 +89,8 @@ type AddVariantParams struct {
 	ParentMsgID uuid.NullUUID
 }
 
-func (q *Queries) AddVariant(ctx context.Context, arg AddVariantParams) (Message, error) {
-	row := q.db.QueryRowContext(ctx, addVariant,
+func (q *Queries) AddVariant(ctx context.Context, arg AddVariantParams) error {
+	_, err := q.db.ExecContext(ctx, addVariant,
 		arg.Reasoning,
 		arg.Content,
 		arg.ChatID,
@@ -98,22 +98,7 @@ func (q *Queries) AddVariant(ctx context.Context, arg AddVariantParams) (Message
 		arg.Role,
 		arg.ParentMsgID,
 	)
-	var i Message
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
-		&i.Reasoning,
-		&i.Content,
-		&i.ChatID,
-		&i.AuthorID,
-		&i.Idx,
-		&i.Role,
-		&i.ParentMsgID,
-		&i.SequenceIdx,
-	)
-	return i, err
+	return err
 }
 
 const deleteMessages = `-- name: DeleteMessages :exec
