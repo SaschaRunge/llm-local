@@ -226,6 +226,20 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 		} else {
 			history = append([]cachedMessage{}, history[:len(history)-1]...)
 		}
+
+		if lastMessage.Role == communication.RoleAssistant && lastMessage.Name != SystemUserName {
+			authorsNote := fmt.Sprintf("\n\n[SYSTEM: Respond strictly as %q for this turn. Maintain their tone and knowledge.]", lastMessage.Name)
+
+			history = append(history, cachedMessage{
+				authorID: c.userCharacter.ID,
+				Message: communication.Message{
+					Name:      c.userCharacter.Name,
+					Role:      communication.RoleUser,
+					Reasoning: "",
+					Content:   authorsNote,
+				},
+			})
+		}
 	}
 
 	ctxResponse, cancel := context.WithTimeout(c.runtime.Context(), generateAnswerTimeoutInSeconds*time.Second)
