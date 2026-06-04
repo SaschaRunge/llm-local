@@ -13,6 +13,23 @@ VALUES (
 )
 RETURNING *;
 
+-- name: AddVariant :one
+INSERT INTO messages(id, created_at, updated_at, reasoning, content, chat_id, author_id, role, idx, parent_msg_id, sequence_idx)
+VALUES (
+    gen_random_uuid(),
+    NOW(),
+    NOW(),
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    (SELECT idx FROM messages WHERE id = $6),
+    $6,
+    (SELECT COALESCE(MAX(sequence_idx), 0) + 1 FROM messages WHERE parent_msg_id = $6)
+)
+RETURNING *;
+
 -- name: GetMessagesByChatID :many
 SELECT * FROM messages
 WHERE chat_id = $1
