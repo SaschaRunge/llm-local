@@ -11,7 +11,7 @@ type regenerate struct{}
 
 func (c *regenerate) Name() string { return "/regenerate" }
 func (c *regenerate) Description() string {
-	return "Regenerates message [id]."
+	return "Regenerates the last message."
 }
 func (c *regenerate) Usage() string     { return fmt.Sprintf("%s", c.Name()) }
 func (c *regenerate) MinArguments() int { return 1 }

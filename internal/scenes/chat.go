@@ -26,10 +26,11 @@ var SystemUserName = "System"
 type Chat struct {
 	card           json.RawMessage
 	userCharacter  character
-	lastResponse   cachedMessage
 	cachedMessages []cachedMessage
 	characters     []character
 	systemPrompt   string
+
+	lastResponseIdx int
 
 	ID   uuid.UUID
 	Name string
@@ -135,11 +136,40 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 		return core.Result{}, err
 	}
 
-	c.lastResponse = assistantMessage
+	c.lastResponseIdx = 0
 
 	return core.Result{
 		Author:    currentCharacter.Name,
 		Response:  content,
+		NextScene: c,
+	}, nil
+}
+
+func (c *Chat) Cycle() (core.Result, error) {
+
+	if len(c.cachedMessages) < 1 {
+		return core.Result{}, fmt.Errorf("message history is empty, nothing to cycle through")
+	}
+
+	if c.cachedMessages[len(c.cachedMessages)-1].Role != communication.RoleAssistant {
+		return core.Result{}, fmt.Errorf("unexpected: the last message in history is a user/system massage")
+	}
+
+	maxVariants := len(c.cachedMessages[len(c.cachedMessages)-1].variants)
+
+	if maxVariants == 0 {
+		return core.Result{}, fmt.Errorf("no variants of previous message available, nothing to cycle through")
+	}
+
+	c.lastResponseIdx = (c.lastResponseIdx + 1) % (maxVariants + 1)
+	lastResponse, err := c.getLastResponse()
+	if err != nil {
+		return core.Result{}, nil
+	}
+
+	return core.Result{
+		Author:    lastResponse.AuthorName,
+		Response:  fmt.Sprintf("%s (%d/%d)", lastResponse.Content, c.lastResponseIdx+1, maxVariants+1),
 		NextScene: c,
 	}, nil
 }
@@ -188,7 +218,7 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 		return core.Result{}, err
 	}
 
-	c.lastResponse = assistantMessage
+	c.lastResponseIdx = 0
 
 	return core.Result{
 		Author:    SystemUserName,
@@ -205,7 +235,10 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 		return core.Result{}, fmt.Errorf("no chat history, nothing to regenerate")
 	}
 
-	lastResponse := c.lastResponse
+	lastResponse, err := c.getLastResponse()
+	if err != nil {
+		return core.Result{}, err
+	}
 	parentMessage := history[len(history)-1]
 
 	if lastResponse.Role != communication.RoleAssistant {
@@ -291,21 +324,11 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 	}
 
 	c.cachedMessages[len(c.cachedMessages)-1].variants = append(c.cachedMessages[len(c.cachedMessages)-1].variants, newVariant)
-
-	/*
-		err = dbQueries.ReplaceMessage(ctx, database.ReplaceMessageParams{
-			ID:        answer.id,
-			Reasoning: sql.NullString{String: answer.Reasoning, Valid: true},
-			Content:   answer.Content,
-		})
-		if err != nil {
-			return core.Result{}, err
-		}
-	*/
+	maxVariants := len(c.cachedMessages[len(c.cachedMessages)-1].variants)
 
 	return core.Result{
 		Author:    lastResponse.AuthorName,
-		Response:  content,
+		Response:  fmt.Sprintf("%s (%d/%d)", content, maxVariants+1, maxVariants+1),
 		NextScene: c,
 	}, nil
 }
@@ -349,6 +372,20 @@ func (c *Chat) archiveCurrentTurn(userMessage, assistantMessage cachedMessage) e
 	}
 
 	return nil
+}
+
+func (c *Chat) getLastResponse() (cachedMessage, error) {
+	var lastResponse cachedMessage
+	if len(c.cachedMessages) >= 1 {
+		if c.lastResponseIdx == 0 {
+			lastResponse = c.cachedMessages[len(c.cachedMessages)-1]
+		} else if c.lastResponseIdx > 0 {
+			lastResponse = c.cachedMessages[len(c.cachedMessages)-1].variants[c.lastResponseIdx-1]
+		} else {
+			return cachedMessage{}, fmt.Errorf("unexpected: lastResponseIdx should be non-negative, is %d", c.lastResponseIdx)
+		}
+	}
+	return lastResponse, nil
 }
 
 func asComMessages(messages []cachedMessage) []communication.Message {
@@ -449,7 +486,7 @@ func (c *Chat) loadData() error {
 	}
 
 	for _, variant := range variants {
-		c.cachedMessages[len(c.cachedMessages)-1].variants = append([]cachedMessage{}, cachedMessage{
+		c.cachedMessages[len(c.cachedMessages)-1].variants = append(c.cachedMessages[len(c.cachedMessages)-1].variants, cachedMessage{
 			id:       variant.ID,
 			authorID: variant.AuthorID,
 			Message: communication.Message{
@@ -461,13 +498,11 @@ func (c *Chat) loadData() error {
 		})
 	}
 
-	lastMessageIndex := len(c.cachedMessages) - 1
-	lastVariantIndex := len(c.cachedMessages[len(c.cachedMessages)-1].variants) - 1
 	if len(c.cachedMessages) > 1 {
 		if len(variants) > 0 {
-			c.lastResponse = c.cachedMessages[lastMessageIndex].variants[lastVariantIndex]
+			c.lastResponseIdx = len(c.cachedMessages[len(c.cachedMessages)-1].variants)
 		} else {
-			c.lastResponse = c.cachedMessages[lastMessageIndex]
+			c.lastResponseIdx = 0
 		}
 	}
 

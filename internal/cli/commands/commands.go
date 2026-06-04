@@ -16,6 +16,7 @@ func All() []core.Command {
 		&atCharacter{},
 		&characters{},
 		&chats{},
+		&cycle{},
 		&debugDelete{},
 		&edit{},
 		&exit{},
