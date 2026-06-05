@@ -257,7 +257,7 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 
 	if userInput != "" {
 		regenerationPrompt := fmt.Sprintf(
-			"[SYSTEM: The user requested a regeneration of your previous answer with the following comment: \"\"\"\n%s\"\"\"\n. Please rephrase accordingly. Your previous answer was: \"\"\"\n%s\"\"\"\n.]",
+			"[SYSTEM: The user requested a regeneration of your previous answer with the following comment: \"\"\"\n%s\"\"\"\n. Please craft a new response based on your previous response and the users critique. Your previous answer was: \"\"\"\n%s\"\"\"\n.]",
 			userInput, lastResponse.Content)
 
 		//fmt.Printf("TEST OUTPUT: %s\n\n\n", regenerationPrompt)
@@ -350,8 +350,9 @@ func (c *Chat) GetAvailableCharacters() []character {
 }
 
 func (c *Chat) archiveMessage(message cachedMessage) error {
+	valid := message.Reasoning != ""
 	messageInDB, err := c.runtime.Store().DBQueries.AddMessage(c.runtime.Context(), database.AddMessageParams{
-		Reasoning: sql.NullString{},
+		Reasoning: sql.NullString{String: message.Reasoning, Valid: valid},
 		Content:   message.Content,
 		ChatID:    c.ID,
 		AuthorID:  message.authorID,
