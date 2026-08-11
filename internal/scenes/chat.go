@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	generateAnswerTimeoutInSeconds = 240
+	generateAnswerTimeoutInSeconds = 480
 )
 
 var SystemUserID = uuid.MustParse("00000000-0000-0000-0000-000000000000")
@@ -94,7 +94,12 @@ func (c *Chat) AtCharacter(name, userInput string) (core.Result, error) {
 
 	authorsNote := fmt.Sprintf("\n\n[SYSTEM: Respond strictly as %q for this turn. Maintain their tone and knowledge.]", currentCharacter.Name)
 
-	history := append([]cachedMessage{}, c.cachedMessages...)
+	history := append([]cachedMessage{}, c.cachedMessages[:len(c.cachedMessages)-1]...)
+	lastResponse, err := c.getLastResponse()
+	if err != nil {
+		return core.Result{}, err
+	}
+	history = append(history, lastResponse)
 	userMessage := cachedMessage{
 		authorID: c.userCharacter.ID,
 		Message: communication.Message{
@@ -188,7 +193,13 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 		return core.Result{}, fmt.Errorf("no character in current chat %q", c.GetName())
 	}
 
-	history := append([]cachedMessage{}, c.cachedMessages...)
+	history := append([]cachedMessage{}, c.cachedMessages[:len(c.cachedMessages)-1]...)
+	lastResponse, err := c.getLastResponse()
+	if err != nil {
+		return core.Result{}, err
+	}
+	history = append(history, lastResponse)
+
 	userMessage := cachedMessage{
 		authorID: c.userCharacter.ID,
 		Message: communication.Message{
@@ -200,6 +211,10 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 	}
 
 	history = append(history, userMessage)
+
+	for i, msg := range history {
+		fmt.Printf("\nMessage in history: %d. %s\n", i, msg.Content)
+	}
 
 	ctx, cancel := context.WithTimeout(c.runtime.Context(), generateAnswerTimeoutInSeconds*time.Second)
 	defer cancel()
@@ -272,11 +287,7 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 
 		history[len(history)-1] = message
 	} else {
-		if len(history) == 1 {
-			history = append([]cachedMessage{}, history[len(history)-1])
-		} else {
-			history = append([]cachedMessage{}, history[:len(history)-1]...)
-		}
+		history = append([]cachedMessage{}, history[:len(history)-1]...)
 
 		if lastResponse.Role == communication.RoleAssistant && lastResponse.AuthorName != SystemUserName {
 			authorsNote := fmt.Sprintf("\n\n[SYSTEM: Respond strictly as %q for this turn. Maintain their tone and knowledge.]", lastResponse.AuthorName)
@@ -300,9 +311,9 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 		return core.Result{}, err
 	}
 
-	/*for i, msg := range history {
-		fmt.Printf("Message in history: %d. %s\n", i, msg.Content)
-	}*/
+	for i, msg := range history {
+		fmt.Printf("\nMessage in history: %d. %s\n", i, msg.Content)
+	}
 
 	dbQueries := c.runtime.Store().DBQueries
 	ctx := c.runtime.Context()
@@ -333,6 +344,8 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 	c.cachedMessages[len(c.cachedMessages)-1].variants = append(c.cachedMessages[len(c.cachedMessages)-1].variants, newVariant)
 	maxVariants := len(c.cachedMessages[len(c.cachedMessages)-1].variants)
 	c.lastResponseIdx = maxVariants
+
+	// fmt.Printf("\n\n %s", c.cachedMessages[c.lastResponseIdx].Content)
 
 	return core.Result{
 		Author:    lastResponse.AuthorName,
