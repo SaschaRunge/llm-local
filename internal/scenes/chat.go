@@ -200,6 +200,10 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 	}
 	history = append(history, lastResponse)
 
+	//overwrite cachedMessage with activeResponse. Still have to make sure the variants contain all messages
+	c.cachedMessages[len(c.cachedMessages)-1].Content = lastResponse.Content
+	c.cachedMessages[len(c.cachedMessages)-1].Reasoning = lastResponse.Reasoning
+
 	userMessage := cachedMessage{
 		authorID: c.userCharacter.ID,
 		Message: communication.Message{
@@ -212,9 +216,9 @@ func (c *Chat) HandleRawInput(userInput string) (core.Result, error) {
 
 	history = append(history, userMessage)
 
-	for i, msg := range history {
+	/*for i, msg := range history {
 		fmt.Printf("\nMessage in history: %d. %s\n", i, msg.Content)
-	}
+	}*/
 
 	ctx, cancel := context.WithTimeout(c.runtime.Context(), generateAnswerTimeoutInSeconds*time.Second)
 	defer cancel()
@@ -311,9 +315,9 @@ func (c *Chat) Regenerate(userInput string) (core.Result, error) {
 		return core.Result{}, err
 	}
 
-	for i, msg := range history {
+	/*for i, msg := range history {
 		fmt.Printf("\nMessage in history: %d. %s\n", i, msg.Content)
-	}
+	}*/
 
 	dbQueries := c.runtime.Store().DBQueries
 	ctx := c.runtime.Context()
